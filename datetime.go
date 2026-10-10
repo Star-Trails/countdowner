@@ -77,16 +77,21 @@ func clockPicker(c *ui.Context, selected *string, choices []string, label string
 	picker.Popup(func(panel ui.Element) {
 		panel.Width(260).Padding(8).Gap(6).Radius(6).Background(t.Background).Border(1, t.Border)
 		ui.Text(c, label).FontSize(12).TextColor(t.TextMuted)
-		ui.Grid(c).Columns(6).Gap(4).Children(func() {
-			for _, choice := range choices {
-				item := picker.Item(choice).Height(28).Shrink(0).Center().Radius(4)
-				ink := t.Text
-				if choice == *selected || item.Highlighted() {
-					item.Background(t.Accent)
-					ink = t.AccentText
+		_, windowHeight := c.Size()
+		rows := (len(choices) + 5) / 6
+		gridHeight := min(float32(rows*32-4), max(float32(28), windowHeight-64))
+		ui.Scroll(c).Height(gridHeight).Children(func() {
+			ui.Grid(c).Columns(6).Gap(4).Children(func() {
+				for _, choice := range choices {
+					item := picker.Item(choice).Height(28).Shrink(0).Center().Radius(4)
+					ink := t.Text
+					if choice == *selected || item.Highlighted() {
+						item.Background(t.Accent)
+						ink = t.AccentText
+					}
+					item.Children(func() { ui.Text(c, choice).TextColor(ink).FontFeatures("tnum") })
 				}
-				item.Children(func() { ui.Text(c, choice).TextColor(ink).FontFeatures("tnum") })
-			}
+			})
 		})
 	})
 	return picker.Trigger

@@ -2,9 +2,8 @@ module countdowner
 
 go 1.27.1
 
-// Pinned to the inspected native-UI revision (b7e651a0b43a).
 require (
-	github.com/egoist/mygo v0.3.8-0.20261010114752-b7e651a0b43a
+	github.com/egoist/mygo v0.4.0
 	golang.org/x/image v0.46.0
 )
 
