@@ -16,10 +16,12 @@ The widget stays on the desktop behind ordinary application windows. Remaining d
 
 ## Run
 
-Copy the executable for your architecture to a permanent Windows folder, such as `C:\Apps\Countdowner`, and run it:
+Download the ZIP for your architecture from [Releases](https://github.com/Star-Trails/countdowner/releases/latest):
 
-- x64: `build/windows-amd64/Countdowner.exe`
-- ARM64: `build/windows-arm64/Countdowner.exe`
+- Intel/AMD 64-bit: `Countdowner-windows-x64.zip`
+- ARM64: `Countdowner-windows-arm64.zip`
+
+Extract the ZIP and run `Countdowner.exe`. Keep the included `licenses/` directory. Releases include a `SHA256SUMS.txt` checksum file.
 
 Settings open on first launch. Closing settings leaves the widget running. Use the top-right gear to open Settings, or the tray icon to open Settings or quit. Drag the widget header to move it, or its edges and corners to resize it. The minimum size is 240 × 160 DIP.
 
