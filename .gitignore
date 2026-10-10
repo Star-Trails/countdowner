@@ -1,0 +1,14 @@
+# Build outputs and local tooling
+/build/
+/.mygo/
+/.pi/
+*.exe
+*.syso
+*.test
+coverage.out
+
+# Runtime data
+/config.json
+/window-state.json
+/logs/
+*.log

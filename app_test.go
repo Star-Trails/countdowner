@@ -1,0 +1,145 @@
+package main
+
+import (
+	"image/png"
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+
+	"countdowner/internal/model"
+
+	"github.com/egoist/mygo/ui"
+	"golang.org/x/image/font/sfnt"
+)
+
+func TestNativeSettingsAddEditDelete(t *testing.T) {
+	if err := registerFonts(); err != nil {
+		t.Fatal(err)
+	}
+	a := &application{
+		config: model.Default(), store: model.Store{Path: filepath.Join(t.TempDir(), "config.json")},
+		draftTime: time.Date(2026, 12, 1, 9, 0, 0, 0, time.Local),
+	}
+	tester := ui.NewTester(a.settingsView, 760, 820)
+	click := func(label string) {
+		t.Helper()
+		if err := tester.Click(label); err != nil {
+			t.Fatal(err)
+		}
+	}
+	click("Title")
+	tester.Type("Project 專案 项目 日本語 한국어")
+	click("Date")
+	click("December 15, 2026")
+	click("Choose hour")
+	click("13")
+	click("Choose minute")
+	click("28")
+	click("Add countdown")
+	if len(a.config.Countdowns) != 1 || a.statusError {
+		t.Fatalf("add failed: %s, %#v", a.status, a.config.Countdowns)
+	}
+	want := time.Date(2026, 12, 15, 13, 28, 0, 0, time.Local)
+	if !a.config.Countdowns[0].Target.Equal(want) {
+		t.Fatalf("picker saved %v; want %v", a.config.Countdowns[0].Target, want)
+	}
+	id := a.config.Countdowns[0].ID
+	click("Edit")
+	a.draftTitle = "Changed title"
+	tester.Frame()
+	click("Save changes")
+	loaded, err := a.store.Load()
+	if err != nil || loaded.Countdowns[0].Title != "Changed title" || loaded.Countdowns[0].ID != id || !loaded.Countdowns[0].Target.Equal(want) {
+		t.Fatalf("edit did not persist: %v; %#v", err, loaded)
+	}
+	click("Delete")
+	click("Confirm delete")
+	if len(a.config.Countdowns) != 0 {
+		t.Fatal("delete did not update the model")
+	}
+}
+
+func TestBundledFontCoverageAndWeight(t *testing.T) {
+	// Check glyph coverage in both actual font files, not just fallback fonts
+	// that happen to be installed on the developer's machine.
+	for _, filename := range []string{"NotoSansCJK-Regular.ttc", "NotoSansCJK-Bold.ttc"} {
+		data, err := fontFiles.ReadFile("assets/fonts/" + filename)
+		if err != nil {
+			t.Fatal(err)
+		}
+		collection, err := sfnt.ParseCollection(data)
+		if err != nil {
+			t.Fatal(err)
+		}
+		face, err := collection.Font(0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, glyph := range "A體简あ한" {
+			index, err := face.GlyphIndex(nil, glyph)
+			if err != nil || index == 0 {
+				t.Errorf("%s missing %q: %v", filename, glyph, err)
+			}
+		}
+	}
+}
+
+func TestLanguageOrderAndNativeViews(t *testing.T) {
+	if err := registerFonts(); err != nil {
+		t.Fatal(err)
+	}
+	a := &application{config: model.Default()}
+	now := time.Now()
+	for index, title := range []string{"Conference", "專案交付", "毕业答辩", "日本語の締切", "한국어 일정"} {
+		item, err := model.NewCountdown(title, now.Add(time.Duration(index+1)*48*time.Hour).Format("2006-01-02 15:04"), time.Local)
+		if err != nil {
+			t.Fatal(err)
+		}
+		a.config.Countdowns = append(a.config.Countdowns, item)
+	}
+	for index, language := range languageCodes {
+		a.config.Language = language
+		settings := ui.NewTester(a.settingsView, 760, 820)
+		if !settings.HasText(a.t("Language")) || !settings.HasText(languageNames[index]) {
+			t.Errorf("language %s not reflected in the native settings", language)
+		}
+		widget := ui.NewTester(a.widgetView, 340, widgetHeight(5))
+		if !widget.HasText("Conference") || !widget.HasText("日本語の締切") {
+			t.Errorf("multilingual widget content missing for %s", language)
+		}
+	}
+	// Optional headless layout previews, not evidence of Windows embedding.
+	if dir := os.Getenv("COUNTDOWNER_PREVIEW_DIR"); dir != "" {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		a.config.Language = "zh-Hans"
+		for _, view := range []struct {
+			name          string
+			build         func(*ui.Context)
+			width, height int
+		}{
+			{"settings", a.settingsView, 760, 820},
+			{"widget", a.widgetView, 340, widgetHeight(5)},
+		} {
+			for _, dark := range []bool{false, true} {
+				tester := ui.NewTester(view.build, view.width, view.height)
+				tester.SetDark(dark)
+				name := view.name + "-light.png"
+				if dark {
+					name = view.name + "-dark.png"
+				}
+				file, err := os.Create(filepath.Join(dir, name))
+				if err != nil {
+					t.Fatal(err)
+				}
+				encodeErr := png.Encode(file, tester.Image())
+				closeErr := file.Close()
+				if encodeErr != nil || closeErr != nil {
+					t.Fatalf("save preview: %v; %v", encodeErr, closeErr)
+				}
+			}
+		}
+	}
+}
