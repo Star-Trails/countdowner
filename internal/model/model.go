@@ -43,7 +43,7 @@ type Config struct {
 
 func Default() Config {
 	return Config{
-		Version: 1, Countdowns: []Countdown{}, Sort: "manual", Theme: "system", Language: "en",
+		Version: 1, Countdowns: []Countdown{}, Sort: "deadline", Theme: "system", Language: "en",
 		Position: Position{X: 40, Y: 40},
 	}
 }

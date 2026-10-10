@@ -89,6 +89,8 @@ type Controller struct {
 	OnResize                  func(model.Position, model.Size)
 	OnPosition                func(model.Position)
 	OnRedraw                  func()
+	HeaderInteractive         func(x, y float64) bool
+	OnManipulate              func()
 }
 
 type hook struct {
@@ -434,6 +436,9 @@ func windowProcedure(hwnd, message, wp, lp, _, _ uintptr) uintptr {
 		case 0x0201: // WM_LBUTTONDOWN; resize takes precedence over header drag.
 			cursor, frame := c.pointerBounds()
 			if edge := c.edgeAtPointer(cursor, frame); edge != 0 {
+				if c.OnManipulate != nil {
+					c.OnManipulate()
+				}
 				c.resizing, c.cursorStart = edge, cursor
 				c.resizeStart = bounds{float64(frame.Left), float64(frame.Top), float64(frame.Right), float64(frame.Bottom)}
 				setCapture.Call(hwnd)
@@ -441,9 +446,13 @@ func windowProcedure(hwnd, message, wp, lp, _, _ uintptr) uintptr {
 			}
 			if entry.surface {
 				dpi := float64(c.monitor.DPI) / 96
-				if float64(cursor.Y-frame.Top)/dpi < 58 {
+				x, y := float64(cursor.X-frame.Left)/dpi, float64(cursor.Y-frame.Top)/dpi
+				if headerDragAllowed(x, y, c.HeaderInteractive) {
+					if c.OnManipulate != nil {
+						c.OnManipulate()
+					}
 					c.dragging = true
-					c.dragX, c.dragY = float64(cursor.X-frame.Left)/dpi, float64(cursor.Y-frame.Top)/dpi
+					c.dragX, c.dragY = x, y
 					setCapture.Call(hwnd)
 					return 0
 				}

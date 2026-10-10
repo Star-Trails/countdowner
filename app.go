@@ -26,6 +26,9 @@ type application struct {
 	draftTitle, editingID, pendingDelete string
 	draftTime                            time.Time
 	draftDateOnly                        bool
+	draftInput, deleteConfirm            ui.Handle
+	settingsButton                       ui.Handle
+	widgetDeleteID                       string
 }
 
 func (a *application) start() {
@@ -94,6 +97,7 @@ func (a *application) start() {
 }
 
 func (a *application) showSettings() {
+	a.cancelWidgetDelete()
 	if a.settings != nil {
 		a.settings.Show()
 		a.settings.Focus()
@@ -145,7 +149,8 @@ func (a *application) maintainDesktop() {
 			}
 		})
 		controller := &desktop.Controller{
-			OnResize: a.saveWidgetBounds,
+			OnManipulate: a.cancelWidgetDelete,
+			OnResize:     a.saveWidgetBounds,
 			OnPosition: func(position model.Position) {
 				next := a.config
 				next.Position = position
@@ -269,6 +274,7 @@ func (a *application) clearDraft() {
 }
 
 func (a *application) edit(item model.Countdown) {
+	a.draftInput.Focus()
 	a.editingID, a.draftTitle = item.ID, item.Title
 	a.draftTime = item.Target.In(time.Local)
 	a.draftDateOnly = a.draftTime.Hour() == 0 && a.draftTime.Minute() == 0 &&
@@ -280,6 +286,9 @@ func (a *application) remove(id string) {
 	next.Countdowns = slices.DeleteFunc(slices.Clone(next.Countdowns), func(item model.Countdown) bool { return item.ID == id })
 	if a.commit(next) {
 		a.pendingDelete = ""
+		if a.widgetDeleteID == id {
+			a.widgetDeleteID = ""
+		}
 		if a.editingID == id {
 			a.clearDraft()
 		}
@@ -345,15 +354,10 @@ func (a *application) widgetView(c *ui.Context) {
 	contentScale = min(float32(1.5), max(float32(0.8), contentScale))
 	padding := min(float32(24), max(float32(12), width*18/340)) * scale
 	c.Root().Background(t.Background)
-	c.After(time.Second)
-	now := time.Now()
+	a.refreshCountdowns(c)
+	now := c.Now()
 	ui.Column(c).Fill().Padding(padding).Gap(10 * scale).Children(func() {
-		ui.Row(c).Height(30 * scale).Children(func() {
-			ui.Text(c, "Countdowner").FontSize(14 * scale).Grow(1)
-			if width >= 320 {
-				ui.Text(c, a.t("Drag here to move")).FontSize(10 * scale).TextColor(t.TextMuted)
-			}
-		})
+		a.widgetHeader(c, scale)
 		ui.Divider(c)
 		ui.Scroll(c).Grow(1).Gap(16 * scale * contentScale).Children(func() {
 			items := a.config.Ordered()
@@ -361,13 +365,7 @@ func (a *application) widgetView(c *ui.Context) {
 				ui.Text(c, a.t("No countdowns yet")).FontSize(17 * scale)
 				ui.Text(c, a.t("Open settings from the tray to add a deadline")).FontSize(11 * scale).TextColor(t.TextMuted)
 			}
-			for _, item := range items {
-				ui.Column(c.Key(item.ID)).Gap(3 * scale * contentScale).Children(func() {
-					ui.Text(c, item.Title).FontSize(13 * scale * contentScale).MaxLines(2).TextColor(t.TextMuted)
-					ui.Text(c, a.remaining(item, now)).FontSize(26 * scale * contentScale).FontWeight(700).FontFeatures("tnum").SingleLine()
-					ui.Text(c, item.Target.In(time.Local).Format("2006-01-02 15:04")).FontSize(10 * scale * contentScale).SingleLine().TextColor(t.TextMuted)
-				})
-			}
+			a.widgetItems(c, scale, contentScale, now)
 		})
 	})
 }
@@ -375,7 +373,7 @@ func (a *application) widgetView(c *ui.Context) {
 func (a *application) settingsView(c *ui.Context) {
 	t := a.configureTheme(c, 1)
 	c.Root().Background(t.Background)
-	c.After(time.Second)
+	a.refreshCountdowns(c)
 	ui.Column(c).Fill().Children(func() {
 		ui.Column(c).Padding(24, 28, 16).Gap(4).Children(func() {
 			ui.Text(c, "Countdowner").FontSize(28).Bold()
@@ -446,7 +444,7 @@ func (a *application) draftView(c *ui.Context) {
 			heading, action = "Edit countdown", "Save changes"
 		}
 		ui.Text(c, a.t(heading)).FontSize(18).Bold()
-		ui.TextInput(c.Key("title-"+a.editingID), &a.draftTitle).Placeholder(a.t("Title")).Label(a.t("Title")).Disabled(a.readOnly)
+		ui.TextInput(c.Key("title-"+a.editingID), &a.draftTitle).Bind(&a.draftInput).Placeholder(a.t("Title")).Label(a.t("Title")).Disabled(a.readOnly)
 		a.dateTimeView(c)
 		ui.Text(c, a.t("Date only means 00:00. Times use your local timezone.")).FontSize(11).TextColor(c.Theme().TextMuted)
 		ui.Row(c).Gap(8).Children(func() {
@@ -479,20 +477,23 @@ func (a *application) countdownsView(c *ui.Context) {
 			ui.Column(c.Key(item.ID)).Padding(12).Gap(8).Radius(4).Background(c.Theme().Surface).Children(func() {
 				ui.Row(c).Gap(12).Children(func() {
 					ui.Text(c, item.Title).Grow(1).SingleLine()
-					ui.Text(c, a.remaining(item, time.Now())).Bold().FontFeatures("tnum")
+					ui.Text(c, a.remaining(item, c.Now())).Bold().FontFeatures("tnum")
 				})
 				ui.Text(c, item.Target.In(time.Local).Format("2006-01-02 15:04 MST")).FontSize(12).TextColor(c.Theme().TextMuted)
-				ui.Row(c).Gap(6).Children(func() {
-					ui.Button(c, a.t("Edit")).Disabled(a.readOnly).OnClick(func() { a.edit(item) })
-					ui.Button(c, "↑").Label(a.t("Move up")).Disabled(a.readOnly || a.config.Sort != "manual" || index == 0).OnClick(func() { a.move(item.ID, -1) })
-					ui.Button(c, "↓").Label(a.t("Move down")).Disabled(a.readOnly || a.config.Sort != "manual" || index == len(items)-1).OnClick(func() { a.move(item.ID, 1) })
-					ui.Spacer(c)
-					if a.pendingDelete == item.ID {
-						ui.Button(c, a.t("Confirm delete")).Disabled(a.readOnly).OnClick(func() { a.remove(item.ID) })
-						ui.Button(c, a.t("Cancel")).OnClick(func() { a.pendingDelete = "" })
-					} else {
-						ui.Button(c, a.t("Delete")).Disabled(a.readOnly).OnClick(func() { a.pendingDelete = item.ID })
-					}
+				ui.Row(c).Gap(6).Wrap().Children(func() {
+					ui.Row(c).Gap(6).Shrink(0).Children(func() {
+						ui.Button(c, a.t("Edit")).Shrink(0).Disabled(a.readOnly).OnClick(func() { a.edit(item) })
+						ui.Button(c, "↑").Shrink(0).Label(a.t("Move up")).Disabled(a.readOnly || a.config.Sort != "manual" || index == 0).OnClick(func() { a.move(item.ID, -1) })
+						ui.Button(c, "↓").Shrink(0).Label(a.t("Move down")).Disabled(a.readOnly || a.config.Sort != "manual" || index == len(items)-1).OnClick(func() { a.move(item.ID, 1) })
+					})
+					ui.Row(c).Gap(6).Shrink(0).Margin(0, 0, 0, ui.Auto).Children(func() {
+						if a.pendingDelete == item.ID {
+							ui.Button(c, a.t("Confirm delete")).Shrink(0).Bind(&a.deleteConfirm).Disabled(a.readOnly).OnClick(func() { a.remove(item.ID) })
+							ui.Button(c, a.t("Cancel")).Shrink(0).OnClick(func() { a.pendingDelete = "" })
+						} else {
+							ui.Button(c, a.t("Delete")).Shrink(0).Disabled(a.readOnly).OnClick(func() { a.pendingDelete = item.ID })
+						}
+					})
 				})
 			})
 		}

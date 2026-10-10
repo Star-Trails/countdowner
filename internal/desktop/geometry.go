@@ -21,6 +21,10 @@ type bounds struct {
 	left, top, right, bottom float64
 }
 
+func headerDragAllowed(x, y float64, interactive func(x, y float64) bool) bool {
+	return x >= 0 && y >= 0 && y < 58 && (interactive == nil || !interactive(x, y))
+}
+
 func hitResizeEdge(x, y, width, height float64) resizeEdge {
 	if x < 0 || y < 0 || x >= width || y >= height {
 		return 0

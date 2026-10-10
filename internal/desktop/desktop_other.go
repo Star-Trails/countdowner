@@ -11,9 +11,11 @@ import (
 const CornerRadius = 8
 
 type Controller struct {
-	OnResize   func(model.Position, model.Size)
-	OnPosition func(model.Position)
-	OnRedraw   func()
+	OnResize          func(model.Position, model.Size)
+	OnPosition        func(model.Position)
+	OnRedraw          func()
+	HeaderInteractive func(x, y float64) bool
+	OnManipulate      func()
 }
 
 func Available() bool { return false }

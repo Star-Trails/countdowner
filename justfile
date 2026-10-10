@@ -13,4 +13,4 @@ build:
 
 # Optional Native UI layout previews; these do not test desktop embedding.
 preview:
-    COUNTDOWNER_PREVIEW_DIR=build/previews go test . -run TestLanguageOrderAndNativeViews -count=1
+    COUNTDOWNER_PREVIEW_DIR=build/previews go test . -run 'Test(LanguageOrderAndNativeViews|VisualCountdownPreviews)' -count=1

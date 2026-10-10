@@ -6,6 +6,7 @@ A Windows desktop countdown widget built with Go and [MyGo Native UI](https://gi
 
 - Multiple countdowns in one draggable, resizable desktop widget.
 - Adaptive text and spacing, with scrolling when needed.
+- Fixed-size 31-cell day grids and 24-hour urgency rings; events more than 31 days away show text only.
 - Light, dark, and system themes; rounded corners and bold countdown values.
 - English, Traditional Chinese, Simplified Chinese, Japanese, and Korean.
 - Calendar selection, editable hours and minutes, and a date-only option.
@@ -20,7 +21,9 @@ Copy the executable for your architecture to a permanent Windows folder, such as
 - x64: `build/windows-amd64/Countdowner.exe`
 - ARM64: `build/windows-arm64/Countdowner.exe`
 
-Settings open on first launch. Closing settings leaves the widget running. Use the tray icon to reopen settings or quit. Drag the widget header to move it, or its edges and corners to resize it. The minimum size is 240 × 160 DIP.
+Settings open on first launch. Closing settings leaves the widget running. Use the top-right gear to open Settings, or the tray icon to open Settings or quit. Drag the widget header to move it, or its edges and corners to resize it. The minimum size is 240 × 160 DIP.
+
+Hold the six-dot handle below an event's trash button for 300 ms, then drag vertically to reorder. Only this handle starts reordering; dragging event text or its visualization does not. Custom order is saved; choose **Deadline, earliest first** in Settings to restore automatic sorting, which is the default for new configurations. The trash button to the right of each event starts in monochrome. Click once to turn it red, then click again to confirm deletion; clicking elsewhere in the widget cancels confirmation. Editing remains available in Settings.
 
 Keep the executable in its permanent location before enabling startup at login. Include the accompanying `licenses/` directory when redistributing it. The executable is unsigned and may trigger a Windows SmartScreen warning.
 
@@ -40,6 +43,6 @@ Deadlines retain their absolute time when the system time zone changes. Display 
 
 ## Limitations
 
-Targets Windows 11. Calendar month and weekday names currently appear in English.
+Intended for Windows 10/11. Calendar month and weekday names currently appear in English.
 
 Bundled fonts and dependency license notices are included in [`resources/licenses/`](resources/licenses/).

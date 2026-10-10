@@ -2,6 +2,19 @@ package desktop
 
 import "testing"
 
+func TestHeaderDraggingExcludesControls(t *testing.T) {
+	control := func(x, y float64) bool { return x >= 300 && x < 324 && y >= 18 && y < 42 }
+	if headerDragAllowed(312, 30, control) {
+		t.Fatal("header control click must pass to Native UI")
+	}
+	if !headerDragAllowed(100, 30, control) || !headerDragAllowed(100, 30, nil) {
+		t.Fatal("ordinary header presses must still move the widget")
+	}
+	if headerDragAllowed(100, 70, control) {
+		t.Fatal("event area must not move the widget")
+	}
+}
+
 func TestResizeEdges(t *testing.T) {
 	if got := hitResizeEdge(1, 1, 340, 300); got != edgeLeft|edgeTop {
 		t.Fatalf("top-left hit = %v", got)
