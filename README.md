@@ -31,7 +31,7 @@ Keep the executable in its permanent location before enabling startup at login. 
 
 ## Build
 
-Requires Go 1.27.1 or a newer 1.27 release.
+Requires Go 1.27.2 or a newer 1.27 release.
 
 ```sh
 go tool mygo build -platform windows/amd64,windows/arm64

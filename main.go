@@ -19,7 +19,6 @@ func main() {
 		return
 	}
 	mygo.App.SetName("Countdowner")
-	mygo.App.SetVersion("0.1.0")
 	if !mygo.App.RequestSingleInstanceLock() {
 		return
 	}
@@ -38,7 +37,7 @@ func main() {
 	defer file.Close()
 	log.SetOutput(file)
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
-	log.Printf("Countdowner 0.1.0; %s; %s/%s", runtime.Version(), runtime.GOOS, runtime.GOARCH)
+	log.Printf("Countdowner %s; %s; MyGo %s; %s/%s", mygo.App.Version(), runtime.Version(), mygo.Version, runtime.GOOS, runtime.GOARCH)
 
 	app := &application{store: model.Store{Path: filepath.Join(dir, "config.json")}}
 	app.config, err = app.store.Load()

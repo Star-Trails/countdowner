@@ -1,6 +1,6 @@
 module countdowner
 
-go 1.27.1
+go 1.27.2
 
 require (
 	github.com/egoist/mygo v0.4.0

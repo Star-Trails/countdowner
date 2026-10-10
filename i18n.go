@@ -9,6 +9,7 @@ var languageNames = []string{"English", "正體中文", "简体中文", "日本�
 // Columns are Traditional Chinese, Simplified Chinese, Japanese, and Korean.
 // The dictionary key itself is the English translation.
 var translations = map[string][4]string{
+	"About":                           {"關於", "关于", "このアプリについて", "정보"},
 	"Settings":                        {"設定", "设置", "設定", "설정"},
 	"Quit":                            {"結束", "退出", "終了", "종료"},
 	"Your deadlines, on your desktop": {"重要時刻，就在桌面", "重要时刻，就在桌面", "大切な予定をデスクトップに", "중요한 일정을 바탕 화면에"},

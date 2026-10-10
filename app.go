@@ -395,6 +395,8 @@ func (a *application) settingsView(c *ui.Context) {
 					}
 				}
 			})
+			ui.Divider(c)
+			a.aboutView(c)
 		})
 		ui.Column(c).Padding(12, 28).Gap(4).Background(t.Surface).Children(func() {
 			ink := t.TextMuted
