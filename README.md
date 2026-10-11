@@ -1,18 +1,18 @@
 # Countdowner
 
-A Windows desktop countdown widget built with Go and [MyGo Native UI](https://github.com/egoist/mygo). No WebView2 or additional font installation is required.
+A lightweight, single-executable countdown widget that lives on your Windows desktop.
 
 ## Features
 
-- Multiple countdowns in one draggable, resizable desktop widget.
-- Adaptive text and spacing, with scrolling when needed.
-- Fixed-size 31-cell day grids and 24-hour urgency rings; events more than 31 days away show text only.
-- Light, dark, and system themes; rounded corners and bold countdown values.
-- English, Traditional Chinese, Simplified Chinese, Japanese, and Korean.
-- Calendar selection, editable hours and minutes, and a date-only option.
-- Manual or deadline sorting, saved position and size, and optional startup at login.
+- **Small download, no setup** — about 5 MB to download and a 12 MB EXE on x64. Extract and run; no installer or extra runtime to install. ARM64 builds are available too.
+- **One executable, fully native** — built with Go and [MyGo Native UI](https://github.com/egoist/mygo). No Electron, embedded browser, WebView2, or bundled font files.
+- **Desktop, not always-on-top** — stays behind your apps without cluttering the taskbar or Alt+Tab. Return to your countdowns with Win+D.
+- **See urgency, not just numbers** — colored day grids turn into progress rings for the final 24 hours. Distant deadlines stay text-only to keep the desktop uncluttered.
+- **Your data stays on your PC** — countdowns work offline, with no account or cloud service required. Changing the system time zone does not change a deadline's actual moment.
+- **One widget, your layout** — keep multiple deadlines together, resize freely, and drag to reorder or sort by deadline. Position, size, and order are remembered.
+- **At home on Windows** — system fonts, light/dark/system themes, and English, Traditional Chinese, Simplified Chinese, Japanese, and Korean interfaces.
 
-The widget stays on the desktop behind ordinary application windows. Remaining days and minutes are rounded up; expired countdowns remain visible.
+Remaining days and minutes are rounded up; expired countdowns remain visible.
 
 ## Run
 
