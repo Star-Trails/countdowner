@@ -12,9 +12,6 @@ import (
 )
 
 func TestAboutLinksWrapWithFullTextWidths(t *testing.T) {
-	if err := registerFonts(); err != nil {
-		t.Fatal(err)
-	}
 	previousVersion := mygo.App.Version()
 	mygo.App.SetVersion("0.1.5")
 	defer mygo.App.SetVersion(previousVersion)

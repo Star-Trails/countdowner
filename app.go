@@ -32,9 +32,6 @@ type application struct {
 }
 
 func (a *application) start() {
-	if err := registerFonts(); err != nil {
-		a.fail(fmt.Errorf("Noto Sans CJK: %w", err))
-	}
 	mygo.Theme.SetSource(mygo.ThemeSource(a.config.Theme))
 	work := mygo.Screen.PrimaryDisplay().WorkArea
 	a.settings = mygo.NewWindow(mygo.WindowOptions{

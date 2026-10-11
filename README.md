@@ -47,4 +47,6 @@ Deadlines retain their absolute time when the system time zone changes. Display 
 
 Intended for Windows 10/11. Calendar month and weekday names currently appear in English.
 
-Bundled fonts and dependency license notices are included in [`resources/licenses/`](resources/licenses/).
+Windows system fonts are selected for each interface language, with native fallback for other characters. No font files are bundled.
+
+Dependency license notices are included in [`resources/licenses/`](resources/licenses/).

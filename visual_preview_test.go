@@ -17,9 +17,6 @@ func TestVisualCountdownPreviews(t *testing.T) {
 	if dir == "" {
 		t.Skip("optional headless preview")
 	}
-	if err := registerFonts(); err != nil {
-		t.Fatal(err)
-	}
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		t.Fatal(err)
 	}

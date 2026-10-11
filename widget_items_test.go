@@ -13,9 +13,6 @@ import (
 
 func widgetFixture(t *testing.T) (*application, *time.Time, *ui.Tester) {
 	t.Helper()
-	if err := registerFonts(); err != nil {
-		t.Fatal(err)
-	}
 	now := time.Date(2026, 12, 1, 12, 0, 0, 0, time.UTC)
 	a := &application{config: model.Default(), store: model.Store{Path: filepath.Join(t.TempDir(), "config.json")}}
 	a.config.Countdowns = []model.Countdown{

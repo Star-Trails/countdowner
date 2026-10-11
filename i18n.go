@@ -75,12 +75,14 @@ func (a *application) t(key string) string {
 func (a *application) fontFamily() string {
 	switch a.config.Language {
 	case "zh-Hant":
-		return "Noto Sans CJK TC"
+		return "Microsoft JhengHei UI, system-ui"
+	case "zh-Hans":
+		return "Microsoft YaHei UI, system-ui"
 	case "ja":
-		return "Noto Sans CJK JP"
+		return "Yu Gothic UI, system-ui"
 	case "ko":
-		return "Noto Sans CJK KR"
+		return "Malgun Gothic, system-ui"
 	default:
-		return "Noto Sans CJK SC"
+		return "system-ui"
 	}
 }

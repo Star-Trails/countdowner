@@ -11,9 +11,6 @@ import (
 )
 
 func TestWidgetResizeLayoutAndPersistence(t *testing.T) {
-	if err := registerFonts(); err != nil {
-		t.Fatal(err)
-	}
 	a := &application{config: model.Default(), store: model.Store{Path: filepath.Join(t.TempDir(), "config.json")}}
 	item, err := model.NewCountdown("First deadline", time.Now().Add(72*time.Hour).Format("2006-01-02 15:04"), time.Local)
 	if err != nil {
@@ -21,10 +18,12 @@ func TestWidgetResizeLayoutAndPersistence(t *testing.T) {
 	}
 	a.config.Countdowns = []model.Countdown{item}
 	tester := ui.NewTester(a.widgetView, 240, 160)
-	small, ok := tester.Find("3 days")
-	if !ok {
+	if _, ok := tester.Find("3 days"); !ok {
 		t.Fatal("small widget lost its countdown")
 	}
+	// Compare single-line layouts: system fonts may wrap at the minimum size.
+	tester.SetSize(340, 240)
+	small, _ := tester.Find("3 days")
 	tester.SetSize(640, 480)
 	large, ok := tester.Find("3 days")
 	if !ok || large.H <= small.H {

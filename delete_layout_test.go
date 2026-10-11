@@ -10,9 +10,6 @@ import (
 )
 
 func TestDeleteConfirmationKeepsFullButtonLabels(t *testing.T) {
-	if err := registerFonts(); err != nil {
-		t.Fatal(err)
-	}
 	a := &application{config: model.Default()}
 	a.config.Countdowns = []model.Countdown{{ID: "one", Title: "Deadline", Target: time.Now().Add(48 * time.Hour)}}
 	tester := ui.NewTester(func(c *ui.Context) {

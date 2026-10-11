@@ -10,13 +10,9 @@ import (
 	"countdowner/internal/model"
 
 	"github.com/egoist/mygo/ui"
-	"golang.org/x/image/font/sfnt"
 )
 
 func TestNativeSettingsAddEditDelete(t *testing.T) {
-	if err := registerFonts(); err != nil {
-		t.Fatal(err)
-	}
 	a := &application{
 		config: model.Default(), store: model.Store{Path: filepath.Join(t.TempDir(), "config.json")},
 		draftTime: time.Date(2026, 12, 1, 9, 0, 0, 0, time.Local),
@@ -60,35 +56,23 @@ func TestNativeSettingsAddEditDelete(t *testing.T) {
 	}
 }
 
-func TestBundledFontCoverageAndWeight(t *testing.T) {
-	// Check glyph coverage in both actual font files, not just fallback fonts
-	// that happen to be installed on the developer's machine.
-	for _, filename := range []string{"NotoSansCJK-Regular.ttc", "NotoSansCJK-Bold.ttc"} {
-		data, err := fontFiles.ReadFile("assets/fonts/" + filename)
-		if err != nil {
-			t.Fatal(err)
-		}
-		collection, err := sfnt.ParseCollection(data)
-		if err != nil {
-			t.Fatal(err)
-		}
-		face, err := collection.Font(0)
-		if err != nil {
-			t.Fatal(err)
-		}
-		for _, glyph := range "A體简あ한" {
-			index, err := face.GlyphIndex(nil, glyph)
-			if err != nil || index == 0 {
-				t.Errorf("%s missing %q: %v", filename, glyph, err)
-			}
+func TestNativeFontFamilies(t *testing.T) {
+	a := &application{config: model.Default()}
+	for _, test := range []struct{ language, family string }{
+		{"en", "system-ui"},
+		{"zh-Hant", "Microsoft JhengHei UI, system-ui"},
+		{"zh-Hans", "Microsoft YaHei UI, system-ui"},
+		{"ja", "Yu Gothic UI, system-ui"},
+		{"ko", "Malgun Gothic, system-ui"},
+	} {
+		a.config.Language = test.language
+		if got := a.fontFamily(); got != test.family {
+			t.Errorf("%s font family: got %q; want %q", test.language, got, test.family)
 		}
 	}
 }
 
 func TestLanguageOrderAndNativeViews(t *testing.T) {
-	if err := registerFonts(); err != nil {
-		t.Fatal(err)
-	}
 	a := &application{config: model.Default()}
 	now := time.Now()
 	for index, title := range []string{"Conference", "專案交付", "毕业答辩", "日本語の締切", "한국어 일정"} {

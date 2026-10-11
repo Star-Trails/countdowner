@@ -2,36 +2,10 @@ package main
 
 import (
 	"bytes"
-	"embed"
 	"image"
 	"image/color"
 	"image/png"
-	"sync"
-
-	"github.com/egoist/mygo/ui"
 )
-
-//go:embed assets/fonts/*.ttc
-var fontFiles embed.FS
-
-var fontOnce sync.Once
-var fontError error
-
-func registerFonts() error {
-	fontOnce.Do(func() {
-		for _, name := range []string{"NotoSansCJK-Regular.ttc", "NotoSansCJK-Bold.ttc"} {
-			data, err := fontFiles.ReadFile("assets/fonts/" + name)
-			if err == nil {
-				err = ui.RegisterFont(data, "")
-			}
-			if err != nil {
-				fontError = err
-				return
-			}
-		}
-	})
-	return fontError
-}
 
 func makeTrayIcon(dark bool) []byte {
 	img := image.NewRGBA(image.Rect(0, 0, 32, 32))
