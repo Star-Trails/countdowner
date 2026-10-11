@@ -13,13 +13,16 @@ import (
 )
 
 func TestSettingsFooterVersionsAndComponentLinks(t *testing.T) {
+	previousVersion := mygo.App.Version()
+	mygo.App.SetVersion("0.0.0-test")
+	defer mygo.App.SetVersion(previousVersion)
 	for _, size := range []struct{ width, height int }{{520, 420}, {760, 820}} {
 		a := &application{config: model.Default()}
 		a.config.Language = "zh-Hans"
 		tester := ui.NewTester(a.settingsView, size.width, size.height)
 		tester.SetDark(size.width == 760)
 		tester.Scroll(float32(size.width)/2, float32(size.height)/2, 0, 10000)
-		for _, label := range []string{a.t("About"), "Go " + strings.TrimPrefix(runtime.Version(), "go"), "MyGo " + mygo.Version, "GitHub"} {
+		for _, label := range []string{a.t("About"), "Go " + strings.TrimPrefix(runtime.Version(), "go"), "MyGo " + mygo.Version, "v" + mygo.App.Version()} {
 			r, ok := tester.Find(label)
 			if !ok || r.W <= 0 || r.H <= 0 || r.Y+r.H > float32(size.height) {
 				t.Fatalf("footer %q is missing or clipped at %dx%d: %+v", label, size.width, size.height, r)

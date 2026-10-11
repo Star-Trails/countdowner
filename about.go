@@ -40,7 +40,7 @@ func (a *application) aboutView(c *ui.Context) {
 			})
 			componentLink(c, "GitHub", repositoryURL, func() {
 				ui.Icon(c, githubIcon).Size(16, 16)
-				ui.Text(c, "GitHub").FontSize(12).SingleLine()
+				ui.Text(c, "v"+mygo.App.Version()).FontSize(12).SingleLine()
 			})
 		})
 	})
