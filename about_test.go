@@ -12,11 +12,12 @@ import (
 	"github.com/egoist/mygo/ui"
 )
 
-func TestSettingsFooterVersionsAndGitHubLink(t *testing.T) {
+func TestSettingsFooterVersionsAndComponentLinks(t *testing.T) {
 	for _, size := range []struct{ width, height int }{{520, 420}, {760, 820}} {
 		a := &application{config: model.Default()}
 		a.config.Language = "zh-Hans"
 		tester := ui.NewTester(a.settingsView, size.width, size.height)
+		tester.SetDark(size.width == 760)
 		tester.Scroll(float32(size.width)/2, float32(size.height)/2, 0, 10000)
 		for _, label := range []string{a.t("About"), "Go " + strings.TrimPrefix(runtime.Version(), "go"), "MyGo " + mygo.Version, "GitHub"} {
 			r, ok := tester.Find(label)
@@ -24,11 +25,18 @@ func TestSettingsFooterVersionsAndGitHubLink(t *testing.T) {
 				t.Fatalf("footer %q is missing or clipped at %dx%d: %+v", label, size.width, size.height, r)
 			}
 		}
-		if err := tester.Click("GitHub"); err != nil {
-			t.Fatal(err)
+		first, _ := tester.Find("Go")
+		last, _ := tester.Find("GitHub")
+		if center := (first.X + last.X + last.W) / 2; center < float32(size.width)/2-1 || center > float32(size.width)/2+1 {
+			t.Fatalf("component links are not centered at %dx%d: center=%v", size.width, size.height, center)
 		}
-		if !slices.Equal(tester.OpenedURLs(), []string{repositoryURL}) {
-			t.Fatalf("GitHub button opened the wrong link: %v", tester.OpenedURLs())
+		for _, name := range []string{"Go", "MyGo", "GitHub"} {
+			if err := tester.Click(name); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if !slices.Equal(tester.OpenedURLs(), []string{goURL, mygoURL, repositoryURL}) {
+			t.Fatalf("component links opened the wrong URLs: %v", tester.OpenedURLs())
 		}
 	}
 }

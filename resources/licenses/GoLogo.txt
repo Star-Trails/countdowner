@@ -1,0 +1,8 @@
+Go logo
+
+Copyright 2018 The Go Authors. All rights reserved.
+
+Official asset: https://go.dev/images/go-logo-blue.svg
+Brand and trademark guidelines: https://go.dev/brand
+
+Used unmodified to identify the Go programming language, not as Countdowner's logo or an endorsement.
