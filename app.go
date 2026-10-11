@@ -484,16 +484,16 @@ func (a *application) countdownsView(c *ui.Context) {
 				ui.Text(c, item.Target.In(time.Local).Format("2006-01-02 15:04 MST")).FontSize(12).TextColor(c.Theme().TextMuted)
 				ui.Row(c).Gap(6).Wrap().Children(func() {
 					ui.Row(c).Gap(6).Shrink(0).Children(func() {
-						ui.Button(c, a.t("Edit")).Shrink(0).Disabled(a.readOnly).OnClick(func() { a.edit(item) })
+						fullLabelButton(c, a.t("Edit")).Disabled(a.readOnly).OnClick(func() { a.edit(item) })
 						ui.Button(c, "↑").Shrink(0).Label(a.t("Move up")).Disabled(a.readOnly || a.config.Sort != "manual" || index == 0).OnClick(func() { a.move(item.ID, -1) })
 						ui.Button(c, "↓").Shrink(0).Label(a.t("Move down")).Disabled(a.readOnly || a.config.Sort != "manual" || index == len(items)-1).OnClick(func() { a.move(item.ID, 1) })
 					})
 					ui.Row(c).Gap(6).Shrink(0).Margin(0, 0, 0, ui.Auto).Children(func() {
 						if a.pendingDelete == item.ID {
-							ui.Button(c, a.t("Confirm delete")).Shrink(0).Bind(&a.deleteConfirm).Disabled(a.readOnly).OnClick(func() { a.remove(item.ID) })
-							ui.Button(c, a.t("Cancel")).Shrink(0).OnClick(func() { a.pendingDelete = "" })
+							fullLabelButton(c, a.t("Confirm delete")).Bind(&a.deleteConfirm).Disabled(a.readOnly).OnClick(func() { a.remove(item.ID) })
+							fullLabelButton(c, a.t("Cancel")).OnClick(func() { a.pendingDelete = "" })
 						} else {
-							ui.Button(c, a.t("Delete")).Shrink(0).Disabled(a.readOnly).OnClick(func() { a.pendingDelete = item.ID })
+							fullLabelButton(c, a.t("Delete")).Disabled(a.readOnly).OnClick(func() { a.pendingDelete = item.ID })
 						}
 					})
 				})

@@ -31,16 +31,16 @@ func (a *application) aboutView(c *ui.Context) {
 		ui.Text(c, a.t("About")).FontSize(12).Bold().TextColor(c.Theme().TextMuted).AlignSelf(ui.Center)
 		ui.Row(c).Gap(16).Wrap().AlignItems(ui.Center).Justify(ui.Center).Children(func() {
 			componentLink(c, "Go", goURL, func() {
-				ui.Image(c, goLogo).Size(36, 16).Fit(ui.Contain)
-				ui.Text(c, "Go "+strings.TrimPrefix(runtime.Version(), "go")).FontSize(12).SingleLine()
+				ui.Image(c, goLogo).Size(36, 16).Fit(ui.Contain).Shrink(0)
+				ui.Text(c, "Go "+strings.TrimPrefix(runtime.Version(), "go")).FontSize(12).NoWrap().Shrink(0)
 			})
 			componentLink(c, "MyGo", mygoURL, func() {
-				ui.Image(c, mygoLogo).Size(16, 16).Fit(ui.Contain)
-				ui.Text(c, "MyGo "+mygo.Version).FontSize(12).SingleLine()
+				ui.Image(c, mygoLogo).Size(16, 16).Fit(ui.Contain).Shrink(0)
+				ui.Text(c, "MyGo "+mygo.Version).FontSize(12).NoWrap().Shrink(0)
 			})
 			componentLink(c, "GitHub", repositoryURL, func() {
-				ui.Icon(c, githubIcon).Size(16, 16)
-				ui.Text(c, "v"+mygo.App.Version()).FontSize(12).SingleLine()
+				ui.Icon(c, githubIcon).Size(16, 16).Shrink(0)
+				ui.Text(c, "v"+mygo.App.Version()).FontSize(12).NoWrap().Shrink(0)
 			})
 		})
 	})
