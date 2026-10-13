@@ -25,6 +25,8 @@ Extract the ZIP and run `Countdowner.exe`. Keep the included `licenses/` directo
 
 Settings open on first launch. Closing settings leaves the widget running. Use the top-right gear to open Settings, or the tray icon to open Settings or quit. Drag the widget header to move it, or its edges and corners to resize it. The minimum size is 240 × 160 DIP.
 
+If a saved display is temporarily unavailable at login or after waking from sleep, the widget appears on the primary display without overwriting its saved position or size. It returns automatically when the saved display becomes available. Dragging or resizing the widget during this fallback saves its new placement; **Reset desktop position** moves it to the primary display.
+
 Hold the six-dot handle below an event's trash button for 300 ms, then drag vertically to reorder. Only this handle starts reordering; dragging event text or its visualization does not. Custom order is saved; choose **Deadline, earliest first** in Settings to restore automatic sorting, which is the default for new configurations. The trash button to the right of each event starts in monochrome. Click once to turn it red, then click again to confirm deletion; clicking elsewhere in the widget cancels confirmation. Editing remains available in Settings.
 
 Keep the executable in its permanent location before enabling startup at login. Include the accompanying `licenses/` directory when redistributing it. The executable is unsigned and may trigger a Windows SmartScreen warning.
@@ -32,6 +34,8 @@ Keep the executable in its permanent location before enabling startup at login. 
 ## Build
 
 Requires Go 1.27.2 or a newer 1.27 release.
+
+The MyGo runtime and build tool use v0.4.8. Dependency versions are pinned in `go.mod`, with checksums recorded in `go.sum`.
 
 ```sh
 go tool mygo build -platform windows/amd64,windows/arm64

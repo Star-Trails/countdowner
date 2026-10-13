@@ -25,18 +25,20 @@ jobs:
         shell: bash
     steps:
       - name: Check out release source
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Set up Go
-        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
           cache: true
 
       - name: Check version
-        run: test "$TAG" = "v$(jq -r .version mygo.json)"
+        run: |
+          test "$TAG" = "v$(jq -r .version mygo.json)"
+          test -s ".github/release-notes/$TAG.md"
 
       - name: Install headless test libraries
         run: |
@@ -77,6 +79,6 @@ jobs:
         run: |
           gh release create "$TAG" build/release/* --draft --verify-tag \
             --title "Countdowner $TAG" \
-            --notes "Download the Windows x64 or ARM64 ZIP, extract it, and run Countdowner.exe. Keep the included licenses directory. Portable and unsigned."
+            --notes-file ".github/release-notes/$TAG.md"
           gh release edit "$TAG" --draft=false --latest
           test "$(gh api "repos/$GH_REPO/releases/tags/$TAG" --jq .immutable)" = true

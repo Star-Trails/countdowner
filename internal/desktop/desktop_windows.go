@@ -79,6 +79,8 @@ type Controller struct {
 	hwnd, surface, host       uintptr
 	width, height             int
 	position                  model.Position
+	preferredPosition         model.Position // Only explicit placement or user manipulation changes this.
+	frame                     rect
 	monitor                   monitor
 	visualScale               float32
 	dragging, placing, hidden bool
@@ -232,8 +234,8 @@ func (c *Controller) embed(host uintptr) error {
 	return nil
 }
 
-// Ensure repairs embedding only when the desktop host changes. It does not
-// periodically manipulate z-order or steal focus.
+// Ensure repairs desktop embedding and placement after Explorer or display changes.
+// It does not periodically manipulate z-order or steal focus.
 func (c *Controller) Ensure() error {
 	if ok, _, _ := isWindow.Call(c.hwnd); ok == 0 {
 		return errors.New("桌面窗口已销毁，等待重建")
@@ -251,7 +253,7 @@ func (c *Controller) Ensure() error {
 			c.hidden = true
 			return err
 		}
-		if err := c.Restore(c.position); err != nil {
+		if err := c.Restore(c.preferredPosition); err != nil {
 			return err
 		}
 		showWindow.Call(c.hwnd, 4)
@@ -262,44 +264,62 @@ func (c *Controller) Ensure() error {
 		c.hidden = false
 	}
 	if !c.dragging && c.resizing == 0 {
-		windowDPI, _, _ := getDPIForWindow.Call(c.hwnd)
-		for _, m := range monitors() {
-			if m.ID == c.monitor.ID && m.DPI == c.monitor.DPI && m.Work == c.monitor.Work &&
-				windowDPI != 0 && c.visualScale == float32(m.DPI)/float32(windowDPI) {
-				return nil
-			}
-		}
-		return c.Restore(c.position)
+		return c.ensurePlacement(monitors())
 	}
 	return nil
 }
 
-func (c *Controller) Restore(position model.Position) error {
-	list := monitors()
-	if len(list) == 0 {
-		return errors.New("没有可用显示器")
-	}
+func monitorForPosition(list []monitor, position model.Position) monitor {
 	chosen := list[0]
 	for _, m := range list {
+		if m.ID == position.Monitor {
+			return m
+		}
 		if m.Primary {
 			chosen = m
 		}
 	}
-	for _, m := range list {
-		if m.ID == position.Monitor {
-			chosen = m
-			break
-		}
+	return chosen
+}
+
+func (c *Controller) ensurePlacement(list []monitor) error {
+	if len(list) == 0 {
+		return errors.New("没有可用显示器")
 	}
+	m := monitorForPosition(list, c.preferredPosition)
+	windowDPI, _, _ := getDPIForWindow.Call(c.hwnd)
+	var frame rect
+	ok, _, _ := getWindowRect.Call(c.hwnd, uintptr(unsafe.Pointer(&frame)))
+	if m == c.monitor && ok != 0 && frame == c.frame && windowDPI != 0 &&
+		c.visualScale == float32(m.DPI)/float32(windowDPI) {
+		return nil
+	}
+	return c.restore(c.preferredPosition, list)
+}
+
+func (c *Controller) Restore(position model.Position) error {
+	return c.restore(position, monitors())
+}
+
+func (c *Controller) restore(position model.Position, list []monitor) error {
+	if len(list) == 0 {
+		return errors.New("没有可用显示器")
+	}
+	c.preferredPosition = position
+	chosen := monitorForPosition(list, position)
 	c.place(chosen, float64(chosen.Work.Left)+position.X*float64(chosen.DPI)/96,
 		float64(chosen.Work.Top)+position.Y*float64(chosen.DPI)/96)
-	c.reportPosition()
+	// Bind a new/reset widget to its initial display. Automatic fallback and
+	// work-area clamping must never replace an existing saved placement.
+	if position.Monitor == "" {
+		c.reportPosition()
+	}
 	return nil
 }
 
 func (c *Controller) SetSize(width, height int) error {
 	c.width, c.height = max(MinWidth, width), max(MinHeight, height)
-	return c.Restore(c.position)
+	return c.Restore(c.preferredPosition)
 }
 
 func (c *Controller) Size() model.Size {
@@ -331,7 +351,7 @@ func (c *Controller) place(m monitor, x, y float64) {
 	screenToClient.Call(c.host, uintptr(unsafe.Pointer(&pt)))
 	setWindowPos.Call(c.hwnd, 0, uintptr(pt.X), uintptr(pt.Y), uintptr(w), uintptr(h), 0x4|0x10)
 	c.monitor = m
-	c.width, c.height = int(math.Round(float64(w)/dpi)), int(math.Round(float64(h)/dpi))
+	getWindowRect.Call(c.hwnd, uintptr(unsafe.Pointer(&c.frame)))
 	c.position = model.Position{Monitor: m.ID, X: (x - float64(m.Work.Left)) / dpi, Y: (y - float64(m.Work.Top)) / dpi}
 	windowDPI, _, _ := getDPIForWindow.Call(c.hwnd)
 	if windowDPI == 0 {
@@ -351,6 +371,7 @@ func (c *Controller) place(m monitor, x, y float64) {
 }
 
 func (c *Controller) reportPosition() {
+	c.preferredPosition = c.position
 	if c.OnPosition != nil {
 		c.OnPosition(c.position)
 	}
@@ -469,6 +490,7 @@ func windowProcedure(hwnd, message, wp, lp, _, _ uintptr) uintptr {
 		case 0x0202, 0x0215: // WM_LBUTTONUP / WM_CAPTURECHANGED
 			if c.resizing != 0 {
 				c.resizing = 0
+				c.preferredPosition = c.position
 				releaseCapture.Call()
 				if c.OnResize != nil {
 					c.OnResize(c.position, c.Size())
@@ -485,7 +507,7 @@ func windowProcedure(hwnd, message, wp, lp, _, _ uintptr) uintptr {
 			// MyGo's top-level screen rect is wrong for an Explorer child.
 			if !entry.surface {
 				if !c.placing && !c.dragging && c.resizing == 0 {
-					_ = c.Restore(c.position)
+					_ = c.Restore(c.preferredPosition)
 				}
 				return 0
 			}
