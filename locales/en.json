@@ -1,0 +1,75 @@
+{
+  "@@locale": "en",
+  "about": "About",
+  "settings": "Settings",
+  "quit": "Quit",
+  "tagline": "Your deadlines, on your desktop",
+  "countdowns": "Countdowns",
+  "emptyCountdowns": "No countdowns yet",
+  "emptyHint": "Open settings from the tray to add a deadline",
+  "newCountdown": "New countdown",
+  "editCountdown": "Edit countdown",
+  "title": "Title",
+  "targetDateAndTime": "Target date and time",
+  "date": "Date",
+  "today": "Today",
+  "tomorrow": "Tomorrow",
+  "dateOnly": "Date only (00:00)",
+  "hour": "Hour",
+  "minute": "Minute",
+  "chooseHour": "Choose hour",
+  "chooseMinute": "Choose minute",
+  "hourInput": "Hour input",
+  "minuteInput": "Minute input",
+  "timeHelp": "Date only means 00:00. Times use your local timezone.",
+  "addCountdown": "Add countdown",
+  "saveChanges": "Save changes",
+  "cancel": "Cancel",
+  "edit": "Edit",
+  "reorder": "Reorder",
+  "countdownIndicator": "Countdown indicator",
+  "delete": "Delete",
+  "confirmDelete": "Confirm delete",
+  "moveUp": "Move up",
+  "moveDown": "Move down",
+  "sortManual": "Manual order",
+  "sortDeadline": "Deadline, earliest first",
+  "appearance": "Appearance",
+  "theme": "Theme",
+  "followSystem": "Follow system",
+  "light": "Light",
+  "dark": "Dark",
+  "language": "Language",
+  "startAtLogin": "Start at login",
+  "resetPosition": "Reset desktop position",
+  "saved": "Saved",
+  "expired": "Expired",
+  "enterATitle": "Enter a title",
+  "invalidDateTime": "Enter a valid local date or time",
+  "readOnlyConfig": "Configuration is read-only; the original file is preserved",
+  "desktopConnected": "Desktop connected",
+  "waitingForDesktop": "Waiting for Explorer desktop",
+  "dataFolder": "Data folder",
+  "autosaveHint": "Automatically saved. Closing this window keeps the widget running.",
+  "remainingDays": "{days, plural, one {# day} other {# days}}",
+  "remainingClock": "{hours, plural, one {# hour} other {# hours}} {minutes} min",
+  "@remainingDays": {
+    "description": "Remaining whole days, rounded up.",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "@remainingClock": {
+    "description": "Remaining hours and minutes after rounding up to the next minute.",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  }
+}

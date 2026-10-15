@@ -32,10 +32,11 @@ type application struct {
 }
 
 func (a *application) start() {
+	mygo.App.SetLocale(a.config.Language)
 	mygo.Theme.SetSource(mygo.ThemeSource(a.config.Theme))
 	work := mygo.Screen.PrimaryDisplay().WorkArea
 	a.settings = mygo.NewWindow(mygo.WindowOptions{
-		Title: "Countdowner — " + a.t("Settings"),
+		Title: "Countdowner — " + a.text().Settings(),
 		Width: min(760, max(520, work.Width-80)), Height: min(820, max(420, work.Height-80)),
 		MinWidth: 520, MinHeight: 420, Hidden: true, StateKey: "settings",
 		Content: ui.View(a.settingsView),
@@ -55,9 +56,9 @@ func (a *application) start() {
 		a.tray.OnClick(a.showSettings)
 		a.tray.OnRightClick(func() {
 			a.tray.SetMenu(mygo.NewMenu([]*mygo.MenuItem{
-				{Label: a.t("Settings"), Click: func(*mygo.MenuItem, *mygo.Window) { a.showSettings() }},
+				{Label: a.text().Settings(), Click: func(*mygo.MenuItem, *mygo.Window) { a.showSettings() }},
 				mygo.Separator(),
-				{Label: a.t("Quit"), Click: func(*mygo.MenuItem, *mygo.Window) { mygo.App.Quit() }},
+				{Label: a.text().Quit(), Click: func(*mygo.MenuItem, *mygo.Window) { mygo.App.Quit() }},
 			}))
 			a.tray.PopUpMenu()
 			a.tray.SetMenu(nil)
@@ -214,7 +215,8 @@ func (a *application) commit(next model.Config) bool {
 		mygo.Theme.SetSource(mygo.ThemeSource(next.Theme))
 	}
 	if a.settings != nil && previous.Language != next.Language {
-		a.settings.SetTitle("Countdowner — " + a.t("Settings"))
+		mygo.App.SetLocale(next.Language)
+		a.settings.SetTitle("Countdowner — " + a.text().Settings())
 	}
 	if a.controller != nil && (previous.WidgetSize != next.WidgetSize ||
 		(next.WidgetSize.Width == 0 && len(previous.Countdowns) != len(next.Countdowns))) {
@@ -324,7 +326,9 @@ func (a *application) setAutostart(enabled bool) {
 
 func (a *application) configureTheme(c *ui.Context, scale float32) *ui.Theme {
 	t := *c.Theme()
-	t.Font = a.fontFamily()
+	// Keep Latin text and digits in the same face across interface languages.
+	// DirectWrite uses the remaining families only for missing glyphs.
+	t.Font = "Segoe UI, Microsoft YaHei UI, Microsoft JhengHei UI, Yu Gothic UI, Malgun Gothic, system-ui"
 	t.FontSize *= scale
 	t.Spacing *= scale
 	t.Radius = 4 * scale
@@ -335,7 +339,15 @@ func (a *application) configureTheme(c *ui.Context, scale float32) *ui.Theme {
 }
 
 func (a *application) remaining(item model.Countdown, now time.Time) string {
-	return a.t(model.Remaining(item.Target, now))
+	remaining := model.Remaining(item.Target, now)
+	text := a.text()
+	if remaining.Expired {
+		return text.Expired()
+	}
+	if remaining.Days > 0 {
+		return text.RemainingDays(remaining.Days)
+	}
+	return text.RemainingClock(remaining.Hours, remaining.Minutes)
 }
 
 func (a *application) widgetView(c *ui.Context) {
@@ -359,8 +371,8 @@ func (a *application) widgetView(c *ui.Context) {
 		ui.Scroll(c).Grow(1).Gap(16 * scale * contentScale).Children(func() {
 			items := a.config.Ordered()
 			if len(items) == 0 {
-				ui.Text(c, a.t("No countdowns yet")).FontSize(17 * scale)
-				ui.Text(c, a.t("Open settings from the tray to add a deadline")).FontSize(11 * scale).TextColor(t.TextMuted)
+				ui.Text(c, a.text().EmptyCountdowns()).FontSize(17 * scale)
+				ui.Text(c, a.text().EmptyHint()).FontSize(11 * scale).TextColor(t.TextMuted)
 			}
 			a.widgetItems(c, scale, contentScale, now)
 		})
@@ -374,7 +386,7 @@ func (a *application) settingsView(c *ui.Context) {
 	ui.Column(c).Fill().Children(func() {
 		ui.Column(c).Padding(24, 28, 16).Gap(4).Children(func() {
 			ui.Text(c, "Countdowner").FontSize(28).Bold()
-			ui.Text(c, a.t("Your deadlines, on your desktop")).TextColor(t.TextMuted)
+			ui.Text(c, a.text().Tagline()).TextColor(t.TextMuted)
 		})
 		ui.Scroll(c).Grow(1).Padding(0, 28, 16).Gap(18).Children(func() {
 			a.preferencesView(c)
@@ -383,9 +395,9 @@ func (a *application) settingsView(c *ui.Context) {
 			ui.Divider(c)
 			a.countdownsView(c)
 			ui.Divider(c)
-			ui.Text(c, a.t(a.desktopStatus)).FontSize(12).TextColor(t.TextMuted)
-			ui.Text(c, a.t("Data folder")+": "+filepath.Dir(a.store.Path)).FontSize(11).TextColor(t.TextMuted).Selectable()
-			ui.Button(c, a.t("Reset desktop position")).Disabled(a.readOnly).OnClick(func() {
+			ui.Text(c, a.statusText(a.desktopStatus)).FontSize(12).TextColor(t.TextMuted)
+			ui.Text(c, a.text().DataFolder()+": "+filepath.Dir(a.store.Path)).FontSize(11).TextColor(t.TextMuted).Selectable()
+			ui.Button(c, a.text().ResetPosition()).Disabled(a.readOnly).OnClick(func() {
 				if a.controller != nil {
 					if err := a.controller.Restore(model.Position{X: 40, Y: 40}); err != nil {
 						a.fail(err)
@@ -401,9 +413,9 @@ func (a *application) settingsView(c *ui.Context) {
 				ink = t.Danger
 			}
 			if a.status != "" {
-				ui.Text(c, a.t(a.status)).TextColor(ink).FontSize(12)
+				ui.Text(c, a.statusText(a.status)).TextColor(ink).FontSize(12)
 			}
-			ui.Text(c, a.t("Automatically saved. Closing this window keeps the widget running.")).FontSize(11).TextColor(t.TextMuted)
+			ui.Text(c, a.text().AutosaveHint()).FontSize(11).TextColor(t.TextMuted)
 		})
 	})
 }
@@ -411,7 +423,7 @@ func (a *application) settingsView(c *ui.Context) {
 func (a *application) preferencesView(c *ui.Context) {
 	ui.Column(c).Gap(10).Children(func() {
 		ui.Row(c).Gap(12).Children(func() {
-			ui.Text(c, a.t("Language")).Width(100)
+			ui.Text(c, a.text().Language()).Width(100)
 			index := slices.Index(languageCodes, a.config.Language)
 			language := languageNames[max(0, index)]
 			ui.Select(c, &language, languageNames).Grow(1).Disabled(a.readOnly).OnChange(func() {
@@ -421,9 +433,9 @@ func (a *application) preferencesView(c *ui.Context) {
 			})
 		})
 		ui.Row(c).Gap(12).Children(func() {
-			ui.Text(c, a.t("Theme")).Width(100)
+			ui.Text(c, a.text().Theme()).Width(100)
 			codes := []string{"system", "light", "dark"}
-			labels := []string{a.t("Follow system"), a.t("Light"), a.t("Dark")}
+			labels := []string{a.text().FollowSystem(), a.text().Light(), a.text().Dark()}
 			choice := labels[slices.Index(codes, a.config.Theme)]
 			ui.Select(c, &choice, labels).Grow(1).Disabled(a.readOnly).OnChange(func() {
 				next := a.config
@@ -432,24 +444,24 @@ func (a *application) preferencesView(c *ui.Context) {
 			})
 		})
 		autostart := a.config.Autostart
-		ui.Checkbox(c, &autostart, a.t("Start at login")).Disabled(a.readOnly).OnChange(func() { a.setAutostart(autostart) })
+		ui.Checkbox(c, &autostart, a.text().StartAtLogin()).Disabled(a.readOnly).OnChange(func() { a.setAutostart(autostart) })
 	})
 }
 
 func (a *application) draftView(c *ui.Context) {
 	ui.Column(c).Gap(10).Children(func() {
-		heading, action := "New countdown", "Add countdown"
+		heading, action := a.text().NewCountdown(), a.text().AddCountdown()
 		if a.editingID != "" {
-			heading, action = "Edit countdown", "Save changes"
+			heading, action = a.text().EditCountdown(), a.text().SaveChanges()
 		}
-		ui.Text(c, a.t(heading)).FontSize(18).Bold()
-		ui.TextInput(c.Key("title-"+a.editingID), &a.draftTitle).Bind(&a.draftInput).Placeholder(a.t("Title")).Label(a.t("Title")).Disabled(a.readOnly)
+		ui.Text(c, heading).FontSize(18).Bold()
+		ui.TextInput(c.Key("title-"+a.editingID), &a.draftTitle).Bind(&a.draftInput).Placeholder(a.text().Title()).Label(a.text().Title()).Disabled(a.readOnly)
 		a.dateTimeView(c)
-		ui.Text(c, a.t("Date only means 00:00. Times use your local timezone.")).FontSize(11).TextColor(c.Theme().TextMuted)
+		ui.Text(c, a.text().TimeHelp()).FontSize(11).TextColor(c.Theme().TextMuted)
 		ui.Row(c).Gap(8).Children(func() {
-			ui.PrimaryButton(c, a.t(action)).Disabled(a.readOnly).OnClick(a.saveDraft)
+			ui.PrimaryButton(c, action).Disabled(a.readOnly).OnClick(a.saveDraft)
 			if a.editingID != "" {
-				ui.Button(c, a.t("Cancel")).OnClick(a.clearDraft)
+				ui.Button(c, a.text().Cancel()).OnClick(a.clearDraft)
 			}
 		})
 	})
@@ -458,9 +470,9 @@ func (a *application) draftView(c *ui.Context) {
 func (a *application) countdownsView(c *ui.Context) {
 	ui.Column(c).Gap(10).Children(func() {
 		ui.Row(c).Gap(12).Children(func() {
-			ui.Text(c, a.t("Countdowns")).FontSize(18).Bold().Grow(1)
+			ui.Text(c, a.text().Countdowns()).FontSize(18).Bold().Grow(1)
 			codes := []string{"manual", "deadline"}
-			labels := []string{a.t("Manual order"), a.t("Deadline, earliest first")}
+			labels := []string{a.text().SortManual(), a.text().SortDeadline()}
 			choice := labels[slices.Index(codes, a.config.Sort)]
 			ui.Select(c, &choice, labels).Width(230).Disabled(a.readOnly).OnChange(func() {
 				next := a.config
@@ -470,7 +482,7 @@ func (a *application) countdownsView(c *ui.Context) {
 		})
 		items := a.config.Ordered()
 		if len(items) == 0 {
-			ui.Text(c, a.t("No countdowns yet")).TextColor(c.Theme().TextMuted)
+			ui.Text(c, a.text().EmptyCountdowns()).TextColor(c.Theme().TextMuted)
 		}
 		for index, item := range items {
 			ui.Column(c.Key(item.ID)).Padding(12).Gap(8).Radius(4).Background(c.Theme().Surface).Children(func() {
@@ -481,16 +493,16 @@ func (a *application) countdownsView(c *ui.Context) {
 				ui.Text(c, item.Target.In(time.Local).Format("2006-01-02 15:04 MST")).FontSize(12).TextColor(c.Theme().TextMuted)
 				ui.Row(c).Gap(6).Wrap().Children(func() {
 					ui.Row(c).Gap(6).Shrink(0).Children(func() {
-						fullLabelButton(c, a.t("Edit")).Disabled(a.readOnly).OnClick(func() { a.edit(item) })
-						ui.Button(c, "↑").Shrink(0).Label(a.t("Move up")).Disabled(a.readOnly || a.config.Sort != "manual" || index == 0).OnClick(func() { a.move(item.ID, -1) })
-						ui.Button(c, "↓").Shrink(0).Label(a.t("Move down")).Disabled(a.readOnly || a.config.Sort != "manual" || index == len(items)-1).OnClick(func() { a.move(item.ID, 1) })
+						fullLabelButton(c, a.text().Edit()).Disabled(a.readOnly).OnClick(func() { a.edit(item) })
+						ui.Button(c, "↑").Shrink(0).Label(a.text().MoveUp()).Disabled(a.readOnly || a.config.Sort != "manual" || index == 0).OnClick(func() { a.move(item.ID, -1) })
+						ui.Button(c, "↓").Shrink(0).Label(a.text().MoveDown()).Disabled(a.readOnly || a.config.Sort != "manual" || index == len(items)-1).OnClick(func() { a.move(item.ID, 1) })
 					})
 					ui.Row(c).Gap(6).Shrink(0).Margin(0, 0, 0, ui.Auto).Children(func() {
 						if a.pendingDelete == item.ID {
-							fullLabelButton(c, a.t("Confirm delete")).Bind(&a.deleteConfirm).Disabled(a.readOnly).OnClick(func() { a.remove(item.ID) })
-							fullLabelButton(c, a.t("Cancel")).OnClick(func() { a.pendingDelete = "" })
+							fullLabelButton(c, a.text().ConfirmDelete()).Bind(&a.deleteConfirm).Disabled(a.readOnly).OnClick(func() { a.remove(item.ID) })
+							fullLabelButton(c, a.text().Cancel()).OnClick(func() { a.pendingDelete = "" })
 						} else {
-							fullLabelButton(c, a.t("Delete")).Disabled(a.readOnly).OnClick(func() { a.pendingDelete = item.ID })
+							fullLabelButton(c, a.text().Delete()).Disabled(a.readOnly).OnClick(func() { a.pendingDelete = item.ID })
 						}
 					})
 				})

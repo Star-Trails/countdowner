@@ -114,23 +114,20 @@ func (c Config) Ordered() []Countdown {
 	return items
 }
 
-func Remaining(target, now time.Time) string {
+// RemainingTime holds rounded countdown units, independently of their language.
+type RemainingTime struct {
+	Days, Hours, Minutes int
+	Expired              bool
+}
+
+func Remaining(target, now time.Time) RemainingTime {
 	d := target.Sub(now)
 	if d <= 0 {
-		return "Expired"
+		return RemainingTime{Expired: true}
 	}
 	if d >= 24*time.Hour {
-		n := (d-1)/(24*time.Hour) + 1
-		if n == 1 {
-			return "1 day"
-		}
-		return fmt.Sprintf("%d days", n)
+		return RemainingTime{Days: int((d-1)/(24*time.Hour) + 1)}
 	}
 	minutes := (d-1)/time.Minute + 1
-	hours := minutes / 60
-	unit := "hours"
-	if hours == 1 {
-		unit = "hour"
-	}
-	return fmt.Sprintf("%d %s %d min", hours, unit, minutes%60)
+	return RemainingTime{Hours: int(minutes / 60), Minutes: int(minutes % 60)}
 }

@@ -4,7 +4,7 @@ A lightweight, single-executable countdown widget that lives on your Windows des
 
 ## Features
 
-- **Small download, no setup** — about 5 MB to download and a 12 MB EXE on x64. Extract and run; no installer or extra runtime to install. ARM64 builds are available too.
+- **Small download, no setup** — about 4.3 MB to download and a 10 MB EXE on x64. Extract and run; no installer or extra runtime to install. ARM64 builds are available too.
 - **One executable, fully native** — built with Go and [MyGo Native UI](https://github.com/egoist/mygo). No Electron, embedded browser, WebView2, or bundled font files.
 - **Desktop, not always-on-top** — stays behind your apps without cluttering the taskbar or Alt+Tab. Return to your countdowns with Win+D.
 - **See urgency, not just numbers** — colored day grids turn into progress rings for the final 24 hours. Distant deadlines stay text-only to keep the desktop uncluttered.
@@ -35,11 +35,13 @@ Keep the executable in its permanent location before enabling startup at login. 
 
 Requires Go 1.27.2 or a newer 1.27 release.
 
-The MyGo runtime and build tool use v0.4.8. Dependency versions are pinned in `go.mod`, with checksums recorded in `go.sum`.
+The MyGo runtime and build tool use the stable release v0.5.1, pinned in `go.mod`. Checksums are recorded in `go.sum`.
 
 ```sh
 go tool mygo build -platform windows/amd64,windows/arm64
 ```
+
+Translations live in `locales/*.json` and use ICU MessageFormat. After editing them, run `go tool mygo generate` and commit `locales/catalog_gen.go` with the catalogs. Run `go tool mygo i18n check` to validate messages and their arguments.
 
 ## Data
 
@@ -49,8 +51,8 @@ Deadlines retain their absolute time when the system time zone changes. Display 
 
 ## Limitations
 
-Intended for Windows 10/11. Calendar month and weekday names currently appear in English.
+Intended for Windows 10/11. Calendar month and weekday names follow the interface language; date formats and the first day of the week follow Windows regional settings.
 
-Windows system fonts are selected for each interface language, with native fallback for other characters. No font files are bundled.
+Segoe UI is the primary font in every interface language. Chinese, Japanese, and Korean characters use a fixed system-font fallback order, so switching languages does not change the font of Latin text or digits. No font files are bundled.
 
 Dependency license notices are included in [`resources/licenses/`](resources/licenses/).

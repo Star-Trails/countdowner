@@ -28,7 +28,7 @@ var githubIcon = ui.MustParseSVG(githubSVG)
 
 func (a *application) aboutView(c *ui.Context) {
 	ui.Column(c.Key("about")).Gap(6).Children(func() {
-		ui.Text(c, a.t("About")).FontSize(12).Bold().TextColor(c.Theme().TextMuted).AlignSelf(ui.Center)
+		ui.Text(c, a.text().About()).FontSize(12).Bold().TextColor(c.Theme().TextMuted).AlignSelf(ui.Center)
 		ui.Row(c).Gap(16).Wrap().AlignItems(ui.Center).Justify(ui.Center).Children(func() {
 			componentLink(c, "Go", goURL, func() {
 				ui.Image(c, goLogo).Size(36, 16).Fit(ui.Contain).Shrink(0)

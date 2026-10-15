@@ -27,7 +27,10 @@ func TestNativeSettingsAddEditDelete(t *testing.T) {
 	click("Title")
 	tester.Type("Project 專案 项目 日本語 한국어")
 	click("Date")
-	click("December 15, 2026")
+	for range 14 {
+		tester.Key(0, ui.KeyRight)
+	}
+	tester.Key(0, ui.KeyEnter)
 	click("Choose hour")
 	click("13")
 	click("Choose minute")
@@ -56,22 +59,6 @@ func TestNativeSettingsAddEditDelete(t *testing.T) {
 	}
 }
 
-func TestNativeFontFamilies(t *testing.T) {
-	a := &application{config: model.Default()}
-	for _, test := range []struct{ language, family string }{
-		{"en", "system-ui"},
-		{"zh-Hant", "Microsoft JhengHei UI, system-ui"},
-		{"zh-Hans", "Microsoft YaHei UI, system-ui"},
-		{"ja", "Yu Gothic UI, system-ui"},
-		{"ko", "Malgun Gothic, system-ui"},
-	} {
-		a.config.Language = test.language
-		if got := a.fontFamily(); got != test.family {
-			t.Errorf("%s font family: got %q; want %q", test.language, got, test.family)
-		}
-	}
-}
-
 func TestLanguageOrderAndNativeViews(t *testing.T) {
 	a := &application{config: model.Default()}
 	now := time.Now()
@@ -85,7 +72,7 @@ func TestLanguageOrderAndNativeViews(t *testing.T) {
 	for index, language := range languageCodes {
 		a.config.Language = language
 		settings := ui.NewTester(a.settingsView, 760, 820)
-		if !settings.HasText(a.t("Language")) || !settings.HasText(languageNames[index]) {
+		if !settings.HasText(a.text().Language()) || !settings.HasText(languageNames[index]) {
 			t.Errorf("language %s not reflected in the native settings", language)
 		}
 		widget := ui.NewTester(a.widgetView, 340, widgetHeight(5))

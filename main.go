@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 
 	"countdowner/internal/model"
 
@@ -46,7 +45,7 @@ func main() {
 		app.config = model.Default()
 		app.readOnly, app.statusError, app.status = true, true, err.Error()
 	} else if _, statErr := os.Stat(app.store.Path); errors.Is(statErr, os.ErrNotExist) {
-		app.config.Language = languageForLocale(mygo.App.Locale())
+		app.config.Language = mygo.App.Locale()
 	}
 	mygo.Theme.SetSource(mygo.ThemeSource(app.config.Theme))
 	// Windows Settings can disable an existing startup entry. Respect the
@@ -61,22 +60,5 @@ func main() {
 	mygo.App.WhenReady(app.start)
 	if err := mygo.App.Run(); err != nil {
 		log.Fatal(err)
-	}
-}
-
-func languageForLocale(locale string) string {
-	locale = strings.ToLower(strings.ReplaceAll(locale, "_", "-"))
-	switch {
-	case strings.HasPrefix(locale, "zh"):
-		if strings.Contains(locale, "hant") || strings.Contains(locale, "tw") || strings.Contains(locale, "hk") || strings.Contains(locale, "mo") {
-			return "zh-Hant"
-		}
-		return "zh-Hans"
-	case strings.HasPrefix(locale, "ja"):
-		return "ja"
-	case strings.HasPrefix(locale, "ko"):
-		return "ko"
-	default:
-		return "en"
 	}
 }

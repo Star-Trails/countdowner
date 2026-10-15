@@ -12,19 +12,19 @@ func TestRemaining(t *testing.T) {
 	now := time.Date(2026, 10, 10, 12, 0, 0, 0, time.UTC)
 	for _, tc := range []struct {
 		duration time.Duration
-		want     string
+		want     RemainingTime
 	}{
-		{25 * time.Hour, "2 days"},
-		{24 * time.Hour, "1 day"},
-		{24*time.Hour - time.Second, "24 hours 0 min"},
-		{90 * time.Minute, "1 hour 30 min"},
-		{59*time.Minute + time.Second, "1 hour 0 min"},
-		{30 * time.Second, "0 hours 1 min"},
-		{0, "Expired"},
-		{-time.Minute, "Expired"},
+		{25 * time.Hour, RemainingTime{Days: 2}},
+		{24 * time.Hour, RemainingTime{Days: 1}},
+		{24*time.Hour - time.Second, RemainingTime{Hours: 24}},
+		{90 * time.Minute, RemainingTime{Hours: 1, Minutes: 30}},
+		{59*time.Minute + time.Second, RemainingTime{Hours: 1}},
+		{30 * time.Second, RemainingTime{Minutes: 1}},
+		{0, RemainingTime{Expired: true}},
+		{-time.Minute, RemainingTime{Expired: true}},
 	} {
 		if got := Remaining(now.Add(tc.duration), now); got != tc.want {
-			t.Errorf("Remaining(%s) = %q; want %q", tc.duration, got, tc.want)
+			t.Errorf("Remaining(%s) = %+v; want %+v", tc.duration, got, tc.want)
 		}
 	}
 }

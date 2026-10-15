@@ -46,7 +46,7 @@ func (a *application) widgetItems(c *ui.Context, scale, contentScale float32, no
 				ui.Text(c, item.Target.In(time.Local).Format("2006-01-02 15:04")).
 					FontSize(10 * scale * contentScale).SingleLine().TextColor(c.Theme().TextMuted)
 			})
-			countdownIndicator(c.Key("indicator"), item, now, scale, a.t("Countdown indicator")+": "+item.Title)
+			countdownIndicator(c.Key("indicator"), item, now, scale, a.text().CountdownIndicator()+": "+item.Title)
 			ui.Column(c.Key("actions")).Size(24*scale, indicatorHeight*scale).Shrink(0).
 				Padding(0).Gap(4 * scale).AlignItems(ui.Center).Children(func() {
 				button := ui.Button(c, "")
@@ -54,9 +54,9 @@ func (a *application) widgetItems(c *ui.Context, scale, contentScale float32, no
 					a.widgetDeleteID = ""
 				}
 				armed := a.widgetDeleteID == item.ID
-				label, trashInk := a.t("Delete"), c.Theme().Text
+				label, trashInk := a.text().Delete(), c.Theme().Text
 				if armed {
-					label, trashInk = a.t("Confirm delete"), ui.RGB(255, 255, 255)
+					label, trashInk = a.text().ConfirmDelete(), ui.RGB(255, 255, 255)
 				}
 				button.Size(24*scale, 24*scale).Shrink(0).Padding(0).Radius(4 * scale).
 					Label(label + ": " + item.Title).Tooltip(label).Disabled(a.readOnly).
@@ -79,7 +79,7 @@ func (a *application) widgetItems(c *ui.Context, scale, contentScale float32, no
 					}
 				})
 				handle = ui.Box(c.Key("reorder-handle")).Size(24*scale, 24*scale).Shrink(0).Radius(4 * scale).
-					Label(a.t("Reorder") + ": " + item.Title).Disabled(a.readOnly).Cursor(ui.CursorGrab)
+					Label(a.text().Reorder() + ": " + item.Title).Disabled(a.readOnly).Cursor(ui.CursorGrab)
 				if handle.Hovered() && !a.readOnly {
 					handle.Background(c.Theme().SurfaceHover)
 				}

@@ -48,6 +48,7 @@ jobs:
 
       - name: Test and vet
         run: |
+          go tool mygo i18n check
           go test ./... -count=1
           go vet ./...
           GOOS=windows GOARCH=amd64 go vet ./...

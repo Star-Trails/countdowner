@@ -3,6 +3,7 @@ default:
 
 # All tests here run in the host environment, not on Windows.
 check:
+    go tool mygo i18n check
     go test ./... -count=1
     go vet ./...
     GOOS=windows GOARCH=amd64 go vet ./...

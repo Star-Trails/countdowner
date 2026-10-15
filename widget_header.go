@@ -7,7 +7,7 @@ func (a *application) widgetHeader(c *ui.Context, scale float32) {
 		ui.Text(c, "Countdowner").FontSize(14 * scale).Grow(1)
 		ink := c.Theme().Text
 		ui.Button(c, "").Size(24*scale, 24*scale).Shrink(0).Padding(0).
-			Bind(&a.settingsButton).Label(a.t("Settings")).Tooltip(a.t("Settings")).
+			Bind(&a.settingsButton).Label(a.text().Settings()).Tooltip(a.text().Settings()).
 			Draw(func(p *ui.Painter, r ui.Rect) { drawGear(p, r, ink, scale) }).
 			OnClick(a.showSettings)
 	})
