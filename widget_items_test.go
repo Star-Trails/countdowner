@@ -11,9 +11,9 @@ import (
 	"github.com/egoist/mygo/ui"
 )
 
-func widgetFixture(t *testing.T) (*application, *time.Time, *ui.Tester) {
+func widgetFixture(t *testing.T) (*application, *ui.Tester) {
 	t.Helper()
-	now := time.Date(2026, 12, 1, 12, 0, 0, 0, time.UTC)
+	now := time.Now()
 	a := &application{config: model.Default(), store: model.Store{Path: filepath.Join(t.TempDir(), "config.json")}}
 	a.config.Countdowns = []model.Countdown{
 		{ID: "late", Title: "Late", Target: now.Add(45 * model.Day)},
@@ -24,31 +24,29 @@ func widgetFixture(t *testing.T) (*application, *time.Time, *ui.Tester) {
 		a.configureTheme(c, 1)
 		ui.Column(c).Fill().Padding(18).Gap(16).Children(func() {
 			a.widgetHeader(c, 1)
-			a.widgetItems(c, 1, 1, now)
+			a.widgetItems(c, 1, 1, c.Now())
 		})
 	}, 340, 420)
-	return a, &now, tester
+	return a, tester
 }
 
 func TestWidgetLongPressReordering(t *testing.T) {
-	a, now, tester := widgetFixture(t)
+	a, tester := widgetFixture(t)
 	early, _ := tester.Find("Reorder: Early")
 	late, _ := tester.Find("Late")
 	x, y := early.X+early.W/2, early.Y+early.H/2
 	tx, ty := late.X+2, late.Y+late.H/2
 	// A quick drag must not reorder an item.
 	tester.Press(x, y)
-	*now = now.Add(299 * time.Millisecond)
-	tester.Frame()
+	tester.Advance(299 * time.Millisecond)
 	tester.Move(tx, ty)
 	tester.Release(tx, ty)
 	if a.config.Sort != "deadline" {
 		t.Fatal("short press activated a reorder")
 	}
-	// The real UI drag runs without sleeping by advancing the supplied time.
+	// The official clock also runs the redraw scheduled by Context.After.
 	tester.Press(x, y)
-	*now = now.Add(reorderHold)
-	tester.Frame()
+	tester.Advance(reorderHold)
 	tester.Move(tx, ty)
 	tester.Release(tx, ty)
 	loaded, err := a.store.Load()
@@ -74,7 +72,7 @@ func TestWidgetLongPressReordering(t *testing.T) {
 }
 
 func TestWidgetHandleLayoutAndExclusiveDragging(t *testing.T) {
-	a, now, tester := widgetFixture(t)
+	a, tester := widgetFixture(t)
 	indicator, _ := tester.Find("Countdown indicator: Early")
 	trash, _ := tester.Find("Delete: Early")
 	handle, _ := tester.Find("Reorder: Early")
@@ -92,8 +90,7 @@ func TestWidgetHandleLayoutAndExclusiveDragging(t *testing.T) {
 	for _, label := range []string{"Early", "5 days", "Countdown indicator: Early"} {
 		source, _ := tester.Find(label)
 		tester.Press(source.X+2, source.Y+source.H/2)
-		*now = now.Add(time.Second)
-		tester.Frame()
+		tester.Advance(time.Second)
 		// Entering the handle after pressing elsewhere must not arm dragging.
 		tester.Move(handle.X+handle.W/2, handle.Y+handle.H/2)
 		tester.Move(target.X+2, target.Y+target.H/2)
@@ -107,7 +104,7 @@ func TestWidgetHandleLayoutAndExclusiveDragging(t *testing.T) {
 func TestWidgetTrashClickAwayCancelsConfirmation(t *testing.T) {
 	for _, label := range []string{"Early", "Countdown indicator: Early", "Reorder: Early", "Settings", ""} {
 		t.Run(label, func(t *testing.T) {
-			a, _, tester := widgetFixture(t)
+			a, tester := widgetFixture(t)
 			if err := tester.Click("Delete: Early"); err != nil {
 				t.Fatal(err)
 			}
@@ -142,7 +139,7 @@ func TestWidgetTrashClickAwayCancelsConfirmation(t *testing.T) {
 }
 
 func TestWidgetTrashConfirmationAndAutomaticSort(t *testing.T) {
-	a, _, tester := widgetFixture(t)
+	a, tester := widgetFixture(t)
 	if err := tester.Click("Delete: Early"); err != nil {
 		t.Fatal(err)
 	}

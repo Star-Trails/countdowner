@@ -35,13 +35,15 @@ Keep the executable in its permanent location before enabling startup at login. 
 
 Requires Go 1.27.2 or a newer 1.27 release.
 
-The MyGo runtime and build tool use the stable release v0.5.1, pinned in `go.mod`. Checksums are recorded in `go.sum`.
+The MyGo runtime and build tool use the stable release v0.5.5, pinned in `go.mod`. Checksums are recorded in `go.sum`.
 
 ```sh
 go tool mygo build -platform windows/amd64,windows/arm64
 ```
 
 Translations live in `locales/*.json` and use ICU MessageFormat. After editing them, run `go tool mygo generate` and commit `locales/catalog_gen.go` with the catalogs. Run `go tool mygo i18n check` to validate messages and their arguments.
+
+UI timing tests use MyGo's virtual clock (`Tester.Now` and `Tester.Advance`) to exercise scheduled redraws and the 300 ms reorder threshold without wall-clock waits.
 
 ## Data
 
