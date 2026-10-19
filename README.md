@@ -35,7 +35,7 @@ Keep the executable in its permanent location before enabling startup at login. 
 
 Requires Go 1.27.2 or a newer 1.27 release.
 
-The MyGo runtime and build tool use the stable release v0.5.5, pinned in `go.mod`. Checksums are recorded in `go.sum`.
+The MyGo runtime and build tool use the stable release v0.5.5. Native library calls use purego v0.11.2. Versions are pinned in `go.mod`, with checksums recorded in `go.sum`.
 
 ```sh
 go tool mygo build -platform windows/amd64,windows/arm64
