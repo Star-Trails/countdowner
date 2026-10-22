@@ -31,10 +31,12 @@ func TestNativeSettingsAddEditDelete(t *testing.T) {
 		tester.Key(0, ui.KeyRight)
 	}
 	tester.Key(0, ui.KeyEnter)
-	click("Choose hour")
-	click("13")
-	click("Choose minute")
-	click("28")
+	click("Hour input")
+	tester.Key(ui.Ctrl, ui.KeyA)
+	tester.Type("13")
+	click("Minute input")
+	tester.Key(ui.Ctrl, ui.KeyA)
+	tester.Type("28")
 	click("Add countdown")
 	if len(a.config.Countdowns) != 1 || a.statusError {
 		t.Fatalf("add failed: %s, %#v", a.status, a.config.Countdowns)

@@ -17,8 +17,6 @@
   "dateOnly": "날짜만 (00:00)",
   "hour": "시",
   "minute": "분",
-  "chooseHour": "시 선택",
-  "chooseMinute": "분 선택",
   "hourInput": "시 입력",
   "minuteInput": "분 입력",
   "timeHelp": "날짜만 선택하면 당일 00:00입니다. 현지 시간대를 사용합니다.",

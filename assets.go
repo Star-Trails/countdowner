@@ -13,8 +13,7 @@ func makeTrayIcon(dark bool) []byte {
 	if dark {
 		ink, halo = halo, ink
 	}
-	// Opposing outlines remain visible even if the app theme and taskbar
-	// theme differ (the app's forced appearance must not hide its tray icon).
+	// A contrasting outline keeps the icon visible on translucent taskbars.
 	for y := 3; y < 30; y++ {
 		for x := 3; x < 30; x++ {
 			dx, dy := x-16, y-16

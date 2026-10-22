@@ -206,26 +206,6 @@ func (msgs Messages) Minute() string {
 	return Catalog.Format(msgs.locale, "minute", nil)
 }
 
-// ChooseHour says "Choose hour"
-// in the language the app shows.
-func ChooseHour() string { return In(i18n.Locale()).ChooseHour() }
-
-// ChooseHour says "Choose hour"
-// in the language of msgs.
-func (msgs Messages) ChooseHour() string {
-	return Catalog.Format(msgs.locale, "chooseHour", nil)
-}
-
-// ChooseMinute says "Choose minute"
-// in the language the app shows.
-func ChooseMinute() string { return In(i18n.Locale()).ChooseMinute() }
-
-// ChooseMinute says "Choose minute"
-// in the language of msgs.
-func (msgs Messages) ChooseMinute() string {
-	return Catalog.Format(msgs.locale, "chooseMinute", nil)
-}
-
 // HourInput says "Hour input"
 // in the language the app shows.
 func HourInput() string { return In(i18n.Locale()).HourInput() }

@@ -17,8 +17,6 @@
   "dateOnly": "僅日期（00:00）",
   "hour": "小時",
   "minute": "分鐘",
-  "chooseHour": "選擇小時",
-  "chooseMinute": "選擇分鐘",
   "hourInput": "輸入小時",
   "minuteInput": "輸入分鐘",
   "timeHelp": "僅日期代表當日 00:00；時間使用本地時區。",

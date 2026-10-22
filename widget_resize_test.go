@@ -45,3 +45,26 @@ func TestWidgetResizeLayoutAndPersistence(t *testing.T) {
 		t.Fatal("adding a countdown reset the custom size")
 	}
 }
+
+func TestWidgetCornersBlendWithDesktop(t *testing.T) {
+	a := &application{config: model.Default()}
+	tester := ui.NewTester(a.widgetView, 340, 196)
+	image := tester.Image()
+	for _, corner := range [][2]int{{0, 0}, {339, 0}, {0, 195}, {339, 195}} {
+		if alpha := image.RGBAAt(corner[0], corner[1]).A; alpha != 0 {
+			t.Fatalf("corner %v covers the desktop: alpha=%d", corner, alpha)
+		}
+	}
+	if alpha := image.RGBAAt(170, 0).A; alpha != 255 {
+		t.Fatalf("straight edge must remain opaque: alpha=%d", alpha)
+	}
+	for y := range 8 {
+		for x := range 8 {
+			alpha := image.RGBAAt(x, y).A
+			if alpha > 0 && alpha < 255 {
+				return
+			}
+		}
+	}
+	t.Fatal("rounded edge has no partially transparent pixels to blend with the desktop")
+}

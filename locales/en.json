@@ -17,8 +17,6 @@
   "dateOnly": "Date only (00:00)",
   "hour": "Hour",
   "minute": "Minute",
-  "chooseHour": "Choose hour",
-  "chooseMinute": "Choose minute",
   "hourInput": "Hour input",
   "minuteInput": "Minute input",
   "timeHelp": "Date only means 00:00. Times use your local timezone.",

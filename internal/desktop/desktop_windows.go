@@ -180,6 +180,10 @@ func monitors() []monitor {
 func (c *Controller) Attach(hwnd uintptr, position model.Position, width, height int) error {
 	c.hwnd, c.position, c.width, c.height = hwnd, position, width, height
 	c.visualScale = 1
+	ex, _, _ := getWindowLong.Call(hwnd, ^uintptr(19)) // GWL_EXSTYLE
+	if ex&0x00200000 == 0 {                            // WS_EX_NOREDIRECTIONBITMAP
+		return errors.New("桌面 Widget 需要 Windows DirectComposition 透明合成")
+	}
 	host := findHost()
 	if host == 0 {
 		return errors.New("未找到 Explorer 桌面图标宿主；Widget 保持隐藏")
@@ -358,8 +362,10 @@ func (c *Controller) place(m monitor, x, y float64) {
 		windowDPI = 96
 	}
 	c.visualScale = float32(m.DPI) / float32(windowDPI)
-	radius := int32(math.Round(CornerRadius * dpi))
-	rgn, _, _ := createRoundRectRgn.Call(0, 0, uintptr(w+1), uintptr(h+1), uintptr(2*radius), uintptr(2*radius))
+	// The hit-test region extends one pixel beyond the UI's rounded boundary,
+	// so its binary clipping cannot cut off antialiasing at any display scale.
+	radius := int32(math.Ceil(CornerRadius * dpi))
+	rgn, _, _ := createRoundRectRgn.Call(^uintptr(0), ^uintptr(0), uintptr(w+2), uintptr(h+2), uintptr(2*radius), uintptr(2*radius))
 	if rgn != 0 {
 		if ok, _, _ := setWindowRgn.Call(c.hwnd, rgn, 1); ok == 0 {
 			deleteObject.Call(rgn) // On success Windows owns the region.

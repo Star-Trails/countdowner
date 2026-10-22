@@ -17,8 +17,6 @@
   "dateOnly": "日付のみ（00:00）",
   "hour": "時",
   "minute": "分",
-  "chooseHour": "時を選択",
-  "chooseMinute": "分を選択",
   "hourInput": "時を入力",
   "minuteInput": "分を入力",
   "timeHelp": "日付のみは当日の 00:00。時刻はローカル時間です。",

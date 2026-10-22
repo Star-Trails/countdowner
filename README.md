@@ -25,6 +25,10 @@ Extract the ZIP and run `Countdowner.exe`. Keep the included `licenses/` directo
 
 Settings open on first launch. Closing settings leaves the widget running. Use the top-right gear to open Settings, or the tray icon to open Settings or quit. Drag the widget header to move it, or its edges and corners to resize it. The minimum size is 240 × 160 DIP.
 
+The tray icon follows the taskbar's light or dark appearance independently of the app theme. Its stable identifier lets Windows remember whether it belongs on the taskbar or in the notification-area overflow. Windows measures and draws the tray menu using the system menu font.
+
+Set a deadline's hour and minute by typing in the numeric fields or using their minus and plus buttons. **Date only** sets the time to 00:00.
+
 If a saved display is temporarily unavailable at login or after waking from sleep, the widget appears on the primary display without overwriting its saved position or size. It returns automatically when the saved display becomes available. Dragging or resizing the widget during this fallback saves its new placement; **Reset desktop position** moves it to the primary display.
 
 Hold the six-dot handle below an event's trash button for 300 ms, then drag vertically to reorder. Only this handle starts reordering; dragging event text or its visualization does not. Custom order is saved; choose **Deadline, earliest first** in Settings to restore automatic sorting, which is the default for new configurations. The trash button to the right of each event starts in monochrome. Click once to turn it red, then click again to confirm deletion; clicking elsewhere in the widget cancels confirmation. Editing remains available in Settings.
@@ -33,9 +37,9 @@ Keep the executable in its permanent location before enabling startup at login. 
 
 ## Build
 
-Requires Go 1.27.2 or a newer 1.27 release.
+Requires Go 1.27.3 or a newer 1.27 release.
 
-The MyGo runtime and build tool use the stable release v0.5.5. Native library calls use purego v0.11.2. Versions are pinned in `go.mod`, with checksums recorded in `go.sum`.
+The MyGo runtime and build tool use the stable release v0.6.2, which includes partial redraws, incremental layout, and Windows focus fixes for native UI. Native library calls use purego v0.11.2. Versions are pinned in `go.mod`, with checksums recorded in `go.sum`.
 
 ```sh
 go tool mygo build -platform windows/amd64,windows/arm64
@@ -54,6 +58,8 @@ Deadlines retain their absolute time when the system time zone changes. Display 
 ## Limitations
 
 Intended for Windows 10/11. Calendar month and weekday names follow the interface language; date formats and the first day of the week follow Windows regional settings.
+
+The widget requires Windows DirectComposition to blend its rounded edges smoothly with the desktop.
 
 Segoe UI is the primary font in every interface language. Chinese, Japanese, and Korean characters use a fixed system-font fallback order, so switching languages does not change the font of Latin text or digits. No font files are bundled.
 

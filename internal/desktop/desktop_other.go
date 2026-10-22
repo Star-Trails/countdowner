@@ -28,3 +28,7 @@ func (c *Controller) Restore(model.Position) error { return c.Ensure() }
 func (c *Controller) SetSize(int, int) error       { return c.Ensure() }
 func (c *Controller) VisualScale() float32         { return 1 }
 func (c *Controller) Size() model.Size             { return model.Size{} }
+
+func PopupTrayMenu(uintptr, string, string) (TrayMenuAction, error) {
+	return TrayMenuDismissed, errors.New("托盘菜单仅支持 Windows")
+}

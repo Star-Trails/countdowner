@@ -155,3 +155,37 @@ func TestResetPlacementSelectsPrimaryDisplay(t *testing.T) {
 	}
 	assertNativeFrame(t, c, rect{40, 40, 380, 236})
 }
+
+func TestRoundedHitRegionPreservesEdgeCoverage(t *testing.T) {
+	c := nativeTestController(t)
+	createRect := gdi32.NewProc("CreateRectRgn")
+	getRegion := user32.NewProc("GetWindowRgn")
+	contains := gdi32.NewProc("PtInRegion")
+	region, _, err := createRect.Call(0, 0, 0, 0)
+	if region == 0 {
+		t.Fatal(err)
+	}
+	defer deleteObject.Call(region)
+	for _, dpi := range []uint32{96, 120, 144, 192, 240, 384} {
+		m := monitor{ID: "scaled", Work: rect{0, 0, 4096, 2160}, DPI: dpi, Primary: true}
+		c.place(m, 0, 0)
+		if kind, _, err := getRegion.Call(c.hwnd, region); kind == 0 {
+			t.Fatal(err)
+		}
+		radius := float64(CornerRadius) * float64(dpi) / 96
+		width, height := int(c.frame.Right-c.frame.Left), int(c.frame.Bottom-c.frame.Top)
+		for y := 0; float64(y) < radius; y++ {
+			for x := 0; float64(x) < radius; x++ {
+				dx, dy := max(0, radius-float64(x+1)), max(0, radius-float64(y+1))
+				if dx*dx+dy*dy >= radius*radius {
+					continue
+				}
+				for _, pixel := range [][2]int{{x, y}, {width - 1 - x, y}, {x, height - 1 - y}, {width - 1 - x, height - 1 - y}} {
+					if inside, _, _ := contains.Call(region, uintptr(pixel[0]), uintptr(pixel[1])); inside == 0 {
+						t.Fatalf("DPI %d: native region clips covered corner pixel %v", dpi, pixel)
+					}
+				}
+			}
+		}
+	}
+}

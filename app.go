@@ -17,7 +17,7 @@ import (
 type application struct {
 	config                               model.Config
 	store                                model.Store
-	settings, widget                     *mygo.Window
+	settings, widget, widgetOwner        *mygo.Window
 	controller                           *desktop.Controller
 	tray                                 *mygo.Tray
 	quitting, readOnly                   bool
@@ -48,28 +48,18 @@ func (a *application) start() {
 		}
 	})
 	var err error
-	a.tray, err = mygo.NewTray(mygo.TrayOptions{Icon: makeTrayIcon(mygo.Theme.IsDark()), ToolTip: "Countdowner"})
+	a.tray, err = mygo.NewTray(mygo.TrayOptions{ID: "countdowner", ToolTip: "Countdowner"})
 	if err != nil {
 		a.fail(err)
 		a.showSettings()
 	} else {
+		updateTrayIcon := func() { a.tray.SetIcon(makeTrayIcon(a.tray.Dark()), false) }
+		updateTrayIcon()
+		a.tray.OnAppearanceChange(updateTrayIcon)
 		a.tray.OnClick(a.showSettings)
-		a.tray.OnRightClick(func() {
-			a.tray.SetMenu(mygo.NewMenu([]*mygo.MenuItem{
-				{Label: a.text().Settings(), Click: func(*mygo.MenuItem, *mygo.Window) { a.showSettings() }},
-				mygo.Separator(),
-				{Label: a.text().Quit(), Click: func(*mygo.MenuItem, *mygo.Window) { mygo.App.Quit() }},
-			}))
-			a.tray.PopUpMenu()
-			a.tray.SetMenu(nil)
-		})
+		a.tray.OnRightClick(a.showTrayMenu)
 	}
-	mygo.Theme.OnUpdated(func() {
-		if a.tray != nil {
-			a.tray.SetIcon(makeTrayIcon(mygo.Theme.IsDark()), false)
-		}
-		a.redraw()
-	})
+	mygo.Theme.OnUpdated(a.redraw)
 	mygo.Screen.OnDisplaysChanged(a.maintainDesktop)
 	mygo.App.OnBeforeQuit(func(*mygo.QuitEvent) { a.quitting = true })
 	// Explorer may destroy our cross-process child; this is not an app quit.
@@ -92,6 +82,20 @@ func (a *application) start() {
 			}
 		}
 	}()
+}
+
+func (a *application) showTrayMenu() {
+	action, err := desktop.PopupTrayMenu(a.settings.NativeHandle(), a.text().Settings(), a.text().Quit())
+	if err != nil {
+		a.fail(err)
+		return
+	}
+	switch action {
+	case desktop.TrayMenuSettings:
+		a.showSettings()
+	case desktop.TrayMenuQuit:
+		mygo.App.Quit()
+	}
 }
 
 func (a *application) showSettings() {
@@ -133,13 +137,22 @@ func (a *application) maintainDesktop() {
 			a.setDesktopStatus("Waiting for Explorer desktop")
 			return
 		}
+		if a.widgetOwner == nil {
+			// MyGo's flyouts support alpha composition on Windows 10/11.
+			// A stationary hidden owner keeps settings moves from moving the widget.
+			a.widgetOwner = mygo.NewWindow(mygo.WindowOptions{
+				Title: "Countdowner Widget Host", Width: 1, Height: 1,
+				Hidden: true, SkipTaskbar: true, DisableClose: true,
+				Content: ui.View(func(*ui.Context) {}),
+			})
+		}
 		size := a.widgetSize()
-		w := mygo.NewWindow(mygo.WindowOptions{
-			Title: "Countdowner Widget", Width: size.Width, Height: size.Height,
-			Hidden: true, Frameless: true, SkipTaskbar: true, DisableShadow: true,
-			DisableResize: true, DisableMinimize: true, DisableMaximize: true, DisableClose: true,
-			Content: ui.View(a.widgetView),
+		w := mygo.NewFlyout(mygo.FlyoutOptions{
+			Parent: a.widgetOwner, Width: size.Width, Height: size.Height,
+			Hidden: true, Content: ui.View(a.widgetView),
 		})
+		w.SetTitle("Countdowner Widget")
+		w.SetClosable(false)
 		a.widget = w
 		w.OnClosed(func() {
 			if a.widget == w {
@@ -362,10 +375,11 @@ func (a *application) widgetView(c *ui.Context) {
 	contentScale := min(width/340, (height-84)/float32(max(1, len(a.config.Countdowns))*86))
 	contentScale = min(float32(1.5), max(float32(0.8), contentScale))
 	padding := min(float32(24), max(float32(12), width*18/340)) * scale
-	c.Root().Background(t.Background)
+	c.Root().Background(ui.Transparent)
 	a.refreshCountdowns(c)
 	now := c.Now()
-	ui.Column(c).Fill().Padding(padding).Gap(10 * scale).Children(func() {
+	ui.Column(c).Fill().Radius(desktop.CornerRadius * scale).Background(t.Background).
+		Padding(padding).Gap(10 * scale).Children(func() {
 		a.widgetHeader(c, scale)
 		ui.Divider(c)
 		ui.Scroll(c).Grow(1).Gap(16 * scale * contentScale).Children(func() {

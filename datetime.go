@@ -1,23 +1,10 @@
 package main
 
 import (
-	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/egoist/mygo/ui"
 )
-
-var hourChoices = clockChoices(24)
-var minuteChoices = clockChoices(60)
-
-func clockChoices(count int) []string {
-	choices := make([]string, count)
-	for i := range choices {
-		choices[i] = fmt.Sprintf("%02d", i)
-	}
-	return choices
-}
 
 func (a *application) dateTimeView(c *ui.Context) {
 	if a.draftTime.IsZero() {
@@ -41,11 +28,6 @@ func (a *application) dateTimeView(c *ui.Context) {
 					ui.NumberInput(c.Key("hour-input"), &hour, 0, 23, 1).Width(140).Label(a.text().HourInput()).Disabled(a.readOnly).OnChange(func() {
 						a.setDraftClock(int(hour), a.draftTime.Minute())
 					})
-					choice := hourChoices[a.draftTime.Hour()]
-					clockPicker(c.Key("hour-picker"), &choice, hourChoices, a.text().Hour(), a.readOnly).Label(a.text().ChooseHour()).OnChange(func() {
-						value, _ := strconv.Atoi(choice)
-						a.setDraftClock(value, a.draftTime.Minute())
-					})
 				})
 				ui.Row(c).Gap(6).Children(func() {
 					ui.Text(c, a.text().Minute())
@@ -53,48 +35,10 @@ func (a *application) dateTimeView(c *ui.Context) {
 					ui.NumberInput(c.Key("minute-input"), &minute, 0, 59, 1).Width(140).Label(a.text().MinuteInput()).Disabled(a.readOnly).OnChange(func() {
 						a.setDraftClock(a.draftTime.Hour(), int(minute))
 					})
-					choice := minuteChoices[a.draftTime.Minute()]
-					clockPicker(c.Key("minute-picker"), &choice, minuteChoices, a.text().Minute(), a.readOnly).Label(a.text().ChooseMinute()).OnChange(func() {
-						value, _ := strconv.Atoi(choice)
-						a.setDraftClock(a.draftTime.Hour(), value)
-					})
 				})
 			})
 		}
 	})
-}
-
-// A bounded grid avoids a 60-row dropdown and lets the user pick any minute
-// with one click, including values not divisible by five.
-func clockPicker(c *ui.Context, selected *string, choices []string, label string, disabled bool) ui.Element {
-	t := c.Theme()
-	picker := ui.SelectBase(c, selected)
-	picker.Trigger.Width(28).Padding(6).Radius(t.Radius).
-		Background(t.Surface).Border(1, t.Border).Label(label).Disabled(disabled).
-		Center().Children(func() {
-		ui.Text(c, "⌄").TextColor(t.TextMuted)
-	})
-	picker.Popup(func(panel ui.Element) {
-		panel.Width(260).Padding(8).Gap(6).Radius(6).Background(t.Background).Border(1, t.Border)
-		ui.Text(c, label).FontSize(12).TextColor(t.TextMuted)
-		_, windowHeight := c.Size()
-		rows := (len(choices) + 5) / 6
-		gridHeight := min(float32(rows*32-4), max(float32(28), windowHeight-64))
-		ui.Scroll(c).Height(gridHeight).Children(func() {
-			ui.Grid(c).Columns(6).Gap(4).Children(func() {
-				for _, choice := range choices {
-					item := picker.Item(choice).Height(28).Shrink(0).Center().Radius(4)
-					ink := t.Text
-					if choice == *selected || item.Highlighted() {
-						item.Background(t.Accent)
-						ink = t.AccentText
-					}
-					item.Children(func() { ui.Text(c, choice).TextColor(ink).FontFeatures("tnum") })
-				}
-			})
-		})
-	})
-	return picker.Trigger
 }
 
 func (a *application) setDraftDay(day time.Time) {
