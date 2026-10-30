@@ -58,13 +58,23 @@ func TestWidgetCornersBlendWithDesktop(t *testing.T) {
 	if alpha := image.RGBAAt(170, 0).A; alpha != 255 {
 		t.Fatalf("straight edge must remain opaque: alpha=%d", alpha)
 	}
-	for y := range 8 {
-		for x := range 8 {
-			alpha := image.RGBAAt(x, y).A
-			if alpha > 0 && alpha < 255 {
-				return
+	// The panel is white, so its antialiased edge is white premultiplied:
+	// every channel equals the alpha. The composited window blends it with
+	// the desktop instead of drawing an opaque grey arc.
+	blended := 0
+	for y := range 16 {
+		for x := range 16 {
+			c := image.RGBAAt(x, y)
+			if c.A == 0 || c.A == 255 {
+				continue
 			}
+			if c.R != c.A || c.G != c.A || c.B != c.A {
+				t.Fatalf("pixel (%d, %d) = %v is not premultiplied white", x, y, c)
+			}
+			blended++
 		}
 	}
-	t.Fatal("rounded edge has no partially transparent pixels to blend with the desktop")
+	if blended == 0 {
+		t.Fatal("rounded edge has no partially transparent pixels to blend with the desktop")
+	}
 }

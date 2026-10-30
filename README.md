@@ -39,7 +39,7 @@ Keep the executable in its permanent location before enabling startup at login. 
 
 Requires Go 1.27.3 or a newer 1.27 release.
 
-The MyGo runtime and build tool use the stable release v0.6.4. Windows native calls primarily use Go's `syscall`; MyGo uses purego v0.11.2 for COM methods with floating-point arguments. Versions are pinned in `go.mod`, with checksums recorded in `go.sum`.
+The MyGo runtime and build tool use the stable release v0.7.3. Windows native calls primarily use Go's `syscall`; MyGo uses purego v0.11.2 for COM methods with floating-point arguments. Versions are pinned in `go.mod`, with checksums recorded in `go.sum`.
 
 ```sh
 go tool mygo build -platform windows/amd64,windows/arm64
@@ -58,8 +58,6 @@ Deadlines retain their absolute time when the system time zone changes. Display 
 ## Limitations
 
 Intended for Windows 10/11. Calendar month and weekday names follow the interface language; date formats and the first day of the week follow Windows regional settings.
-
-The widget requires Windows DirectComposition to blend its rounded edges smoothly with the desktop.
 
 Segoe UI is the primary font in every interface language. Chinese, Japanese, and Korean characters use a fixed system-font fallback order, so switching languages does not change the font of Latin text or digits. No font files are bundled.
 

@@ -73,10 +73,19 @@ func (a *application) start() {
 	go func() {
 		ticker := time.NewTicker(2 * time.Second)
 		defer ticker.Stop()
+		zOrder := time.NewTicker(200 * time.Millisecond)
+		defer zOrder.Stop()
 		for {
 			select {
 			case <-ticker.C:
 				mygo.RunOnMain(a.maintainDesktop)
+			case <-zOrder.C:
+				// Show Desktop raises Explorer's window above the widget.
+				mygo.RunOnMain(func() {
+					if a.controller != nil && !a.quitting {
+						a.controller.MaintainZOrder()
+					}
+				})
 			case <-done:
 				return
 			}
@@ -138,8 +147,8 @@ func (a *application) maintainDesktop() {
 			return
 		}
 		if a.widgetOwner == nil {
-			// MyGo's flyouts support alpha composition on Windows 10/11.
-			// A stationary hidden owner keeps settings moves from moving the widget.
+			// The owner is hidden for the widget's whole life, so the flyout
+			// keeps its alpha-composited rounded corners on the desktop.
 			a.widgetOwner = mygo.NewWindow(mygo.WindowOptions{
 				Title: "Countdowner Widget Host", Width: 1, Height: 1,
 				Hidden: true, SkipTaskbar: true, DisableClose: true,
@@ -375,6 +384,8 @@ func (a *application) widgetView(c *ui.Context) {
 	contentScale := min(width/340, (height-84)/float32(max(1, len(a.config.Countdowns))*86))
 	contentScale = min(float32(1.5), max(float32(0.8), contentScale))
 	padding := min(float32(24), max(float32(12), width*18/340)) * scale
+	// The flyout composites its surface with per-pixel alpha, so the rounded
+	// panel's antialiased edge blends with whatever is behind it.
 	c.Root().Background(ui.Transparent)
 	a.refreshCountdowns(c)
 	now := c.Now()

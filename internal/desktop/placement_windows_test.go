@@ -4,6 +4,7 @@ package desktop
 
 import (
 	"runtime"
+	"syscall"
 	"testing"
 	"unsafe"
 
@@ -17,18 +18,14 @@ func nativeTestController(t *testing.T) *Controller {
 	createWindow := user32.NewProc("CreateWindowExW")
 	destroyWindow := user32.NewProc("DestroyWindow")
 	class := wide("STATIC")
-	host, _, err := createWindow.Call(0, uintptr(unsafe.Pointer(class)), 0, 0x80000000,
-		0, 0, 1920, 1080, 0, 0, 0, 0) // Hidden test-owned host; never alter Explorer.
-	if host == 0 {
-		t.Fatalf("create host: %v", err)
-	}
-	t.Cleanup(func() { destroyWindow.Call(host) })
-	hwnd, _, err := createWindow.Call(0, uintptr(unsafe.Pointer(class)), 0, 0x40000000,
-		0, 0, 340, 196, host, 0, 0, 0)
+	// Hidden top-level window; never alter Explorer's desktop.
+	hwnd, _, err := createWindow.Call(0, uintptr(unsafe.Pointer(class)), 0, 0x80000000,
+		0, 0, 340, 196, 0, 0, 0, 0)
 	if hwnd == 0 {
 		t.Fatalf("create widget: %v", err)
 	}
-	return &Controller{hwnd: hwnd, host: host, width: 340, height: 196}
+	t.Cleanup(func() { destroyWindow.Call(hwnd) })
+	return &Controller{hwnd: hwnd, width: 340, height: 196}
 }
 
 func TestMissingMonitorDoesNotReplaceSavedPosition(t *testing.T) {
@@ -156,36 +153,24 @@ func TestResetPlacementSelectsPrimaryDisplay(t *testing.T) {
 	assertNativeFrame(t, c, rect{40, 40, 380, 236})
 }
 
-func TestRoundedHitRegionPreservesEdgeCoverage(t *testing.T) {
+// A window region makes Windows paint the window without its alpha, which
+// turns the rounded panel's premultiplied edge into a grey arc on the desktop.
+func TestPlacementKeepsPerPixelAlpha(t *testing.T) {
 	c := nativeTestController(t)
-	createRect := gdi32.NewProc("CreateRectRgn")
+	gdi := syscall.NewLazyDLL("gdi32.dll")
+	createRect := gdi.NewProc("CreateRectRgn")
+	destroyRegion := gdi.NewProc("DeleteObject")
 	getRegion := user32.NewProc("GetWindowRgn")
-	contains := gdi32.NewProc("PtInRegion")
 	region, _, err := createRect.Call(0, 0, 0, 0)
 	if region == 0 {
 		t.Fatal(err)
 	}
-	defer deleteObject.Call(region)
+	defer destroyRegion.Call(region)
 	for _, dpi := range []uint32{96, 120, 144, 192, 240, 384} {
 		m := monitor{ID: "scaled", Work: rect{0, 0, 4096, 2160}, DPI: dpi, Primary: true}
 		c.place(m, 0, 0)
-		if kind, _, err := getRegion.Call(c.hwnd, region); kind == 0 {
-			t.Fatal(err)
-		}
-		radius := float64(CornerRadius) * float64(dpi) / 96
-		width, height := int(c.frame.Right-c.frame.Left), int(c.frame.Bottom-c.frame.Top)
-		for y := 0; float64(y) < radius; y++ {
-			for x := 0; float64(x) < radius; x++ {
-				dx, dy := max(0, radius-float64(x+1)), max(0, radius-float64(y+1))
-				if dx*dx+dy*dy >= radius*radius {
-					continue
-				}
-				for _, pixel := range [][2]int{{x, y}, {width - 1 - x, y}, {x, height - 1 - y}, {width - 1 - x, height - 1 - y}} {
-					if inside, _, _ := contains.Call(region, uintptr(pixel[0]), uintptr(pixel[1])); inside == 0 {
-						t.Fatalf("DPI %d: native region clips covered corner pixel %v", dpi, pixel)
-					}
-				}
-			}
+		if kind, _, _ := getRegion.Call(c.hwnd, region); kind != 0 {
+			t.Fatalf("DPI %d: placement set a window region, which drops the window's alpha", dpi)
 		}
 	}
 }

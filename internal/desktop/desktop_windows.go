@@ -18,21 +18,15 @@ const CornerRadius = 8 // Fluent surface corners, in device-independent pixels.
 
 var (
 	user32              = syscall.NewLazyDLL("user32.dll")
-	gdi32               = syscall.NewLazyDLL("gdi32.dll")
 	comctl32            = syscall.NewLazyDLL("comctl32.dll")
 	shcore              = syscall.NewLazyDLL("shcore.dll")
-	findWindow          = user32.NewProc("FindWindowW")
 	findWindowEx        = user32.NewProc("FindWindowExW")
-	enumWindows         = user32.NewProc("EnumWindows")
-	getParent           = user32.NewProc("GetParent")
-	setParent           = user32.NewProc("SetParent")
 	isWindow            = user32.NewProc("IsWindow")
-	getWindowLong       = user32.NewProc("GetWindowLongPtrW")
-	setWindowLong       = user32.NewProc("SetWindowLongPtrW")
 	setWindowPos        = user32.NewProc("SetWindowPos")
 	getWindowRect       = user32.NewProc("GetWindowRect")
-	screenToClient      = user32.NewProc("ScreenToClient")
 	getCursorPos        = user32.NewProc("GetCursorPos")
+	getShellWindow      = user32.NewProc("GetShellWindow")
+	getWindow           = user32.NewProc("GetWindow")
 	setCapture          = user32.NewProc("SetCapture")
 	releaseCapture      = user32.NewProc("ReleaseCapture")
 	loadCursor          = user32.NewProc("LoadCursorW")
@@ -43,9 +37,6 @@ var (
 	getMonitorInfo      = user32.NewProc("GetMonitorInfoW")
 	enumDisplayDevices  = user32.NewProc("EnumDisplayDevicesW")
 	getDPIForMonitor    = shcore.NewProc("GetDpiForMonitor")
-	createRoundRectRgn  = gdi32.NewProc("CreateRoundRectRgn")
-	deleteObject        = gdi32.NewProc("DeleteObject")
-	setWindowRgn        = user32.NewProc("SetWindowRgn")
 	setWindowSubclass   = comctl32.NewProc("SetWindowSubclass")
 	defSubclassProc     = comctl32.NewProc("DefSubclassProc")
 )
@@ -76,7 +67,7 @@ type monitor struct {
 // Its placement uses physical screen coordinates at the Win32 boundary and
 // monitor-relative DIPs in the saved configuration.
 type Controller struct {
-	hwnd, surface, host       uintptr
+	hwnd, surface             uintptr
 	width, height             int
 	position                  model.Position
 	preferredPosition         model.Position // Only explicit placement or user manipulation changes this.
@@ -101,17 +92,8 @@ type hook struct {
 }
 
 var (
-	hooks          = map[uintptr]hook{}
-	desktopHost    uintptr
-	monitorList    []monitor
-	windowCallback = syscall.NewCallback(func(hwnd, _ uintptr) uintptr {
-		view, _, _ := findWindowEx.Call(hwnd, 0, uintptr(unsafe.Pointer(wide("SHELLDLL_DefView"))), 0)
-		if view != 0 {
-			desktopHost = hwnd
-			return 0
-		}
-		return 1
-	})
+	hooks           = map[uintptr]hook{}
+	monitorList     []monitor
 	monitorCallback = syscall.NewCallback(func(hmon, _, _, _ uintptr) uintptr {
 		var info monitorInfo
 		info.Size = uint32(unsafe.Sizeof(info))
@@ -143,33 +125,9 @@ func wide(value string) *uint16 {
 	return p
 }
 
-func findHost() uintptr {
-	// On current Windows 11 builds DefView can be a child of Progman or
-	// a top-level WorkerW. Embed as its sibling ABOVE it, not into the
-	// wallpaper WorkerW behind it (which would intercept pointer input).
-	progman, _, _ := findWindow.Call(uintptr(unsafe.Pointer(wide("Progman"))), 0)
-	if progman != 0 {
-		view, _, _ := findWindowEx.Call(progman, 0, uintptr(unsafe.Pointer(wide("SHELLDLL_DefView"))), 0)
-		if view != 0 {
-			return progman
-		}
-		for child := uintptr(0); ; {
-			child, _, _ = findWindowEx.Call(progman, child, uintptr(unsafe.Pointer(wide("WorkerW"))), 0)
-			if child == 0 {
-				break
-			}
-			view, _, _ := findWindowEx.Call(child, 0, uintptr(unsafe.Pointer(wide("SHELLDLL_DefView"))), 0)
-			if view != 0 {
-				return child
-			}
-		}
-	}
-	desktopHost = 0
-	enumWindows.Call(windowCallback, 0)
-	return desktopHost
-}
-
-func Available() bool { return findHost() != 0 }
+// Available reports whether the widget may show. It is a top-level desktop
+// window, so it does not depend on Explorer's icon host.
+func Available() bool { return true }
 
 func monitors() []monitor {
 	monitorList = nil
@@ -180,17 +138,6 @@ func monitors() []monitor {
 func (c *Controller) Attach(hwnd uintptr, position model.Position, width, height int) error {
 	c.hwnd, c.position, c.width, c.height = hwnd, position, width, height
 	c.visualScale = 1
-	ex, _, _ := getWindowLong.Call(hwnd, ^uintptr(19)) // GWL_EXSTYLE
-	if ex&0x00200000 == 0 {                            // WS_EX_NOREDIRECTIONBITMAP
-		return errors.New("桌面 Widget 需要 Windows DirectComposition 透明合成")
-	}
-	host := findHost()
-	if host == 0 {
-		return errors.New("未找到 Explorer 桌面图标宿主；Widget 保持隐藏")
-	}
-	if err := c.embed(host); err != nil {
-		return err
-	}
 	c.surface, _, _ = findWindowEx.Call(hwnd, 0, uintptr(unsafe.Pointer(wide("MyGoSurface"))), 0)
 	if c.surface == 0 {
 		return errors.New("未找到 MyGo Native UI surface")
@@ -200,7 +147,7 @@ func (c *Controller) Attach(hwnd uintptr, position model.Position, width, height
 		surface bool
 	}{{hwnd, false}, {c.surface, true}} {
 		if ok, _, err := setWindowSubclass.Call(entry.hwnd, subclassCallback, 1, 0); ok == 0 {
-			return fmt.Errorf("安装桌面窗口事件处理：%w", err)
+			return fmt.Errorf("安装窗口事件处理：%w", err)
 		}
 		hooks[entry.hwnd] = hook{c, entry.surface}
 	}
@@ -208,60 +155,29 @@ func (c *Controller) Attach(hwnd uintptr, position model.Position, width, height
 		return err
 	}
 	showWindow.Call(hwnd, 4) // SW_SHOWNOACTIVATE; never foreground the desktop.
+	c.MaintainZOrder()
 	return nil
 }
 
-func (c *Controller) embed(host uintptr) error {
-	const (
-		gwlStyle       = ^uintptr(15) // -16
-		gwlExStyle     = ^uintptr(19) // -20
-		wsChild        = 0x40000000
-		wsPopup        = 0x80000000
-		wsCaption      = 0x00C00000
-		wsThickFrame   = 0x00040000
-		wsExToolWindow = 0x80
-		wsExNoActivate = 0x08000000
-		wsExAppWindow  = 0x40000
-	)
-	style, _, _ := getWindowLong.Call(c.hwnd, gwlStyle)
-	ex, _, _ := getWindowLong.Call(c.hwnd, gwlExStyle)
-	setWindowLong.Call(c.hwnd, gwlStyle, (style|wsChild)&^(wsPopup|wsCaption|wsThickFrame))
-	setWindowLong.Call(c.hwnd, gwlExStyle, (ex|wsExToolWindow|wsExNoActivate)&^wsExAppWindow)
-	_, _, err := setParent.Call(c.hwnd, host)
-	parent, _, _ := getParent.Call(c.hwnd)
-	if parent != host {
-		return fmt.Errorf("桌面嵌入失败（可能是 DPI awareness 不兼容）：%w", err)
+// MaintainZOrder keeps the widget directly above the desktop window, so it
+// stays visible when Show Desktop raises that window, and under every app.
+func (c *Controller) MaintainZOrder() {
+	shell, _, _ := getShellWindow.Call()
+	if shell == 0 {
+		return
 	}
-	c.host = host
-	// HWND_TOP is only the top of Explorer's CHILD hierarchy, not TOPMOST.
-	setWindowPos.Call(c.hwnd, 0, 0, 0, 0, 0, 0x1|0x2|0x10|0x20)
-	return nil
+	above, _, _ := getWindow.Call(shell, 3) // GW_HWNDPREV
+	if above == c.hwnd {
+		return
+	}
+	setWindowPos.Call(c.hwnd, above, 0, 0, 0, 0, 0x1|0x2|0x10) // HWND_TOP unless a window precedes the desktop
 }
 
-// Ensure repairs desktop embedding and placement after Explorer or display changes.
+// Ensure repairs placement after display changes.
 // It does not periodically manipulate z-order or steal focus.
 func (c *Controller) Ensure() error {
 	if ok, _, _ := isWindow.Call(c.hwnd); ok == 0 {
 		return errors.New("桌面窗口已销毁，等待重建")
-	}
-	host := findHost()
-	if host == 0 {
-		showWindow.Call(c.hwnd, 0)
-		c.hidden = true
-		return errors.New("Explorer 桌面尚未就绪")
-	}
-	parent, _, _ := getParent.Call(c.hwnd)
-	if parent != host {
-		if err := c.embed(host); err != nil {
-			showWindow.Call(c.hwnd, 0)
-			c.hidden = true
-			return err
-		}
-		if err := c.Restore(c.preferredPosition); err != nil {
-			return err
-		}
-		showWindow.Call(c.hwnd, 4)
-		c.hidden = false
 	}
 	if c.hidden {
 		showWindow.Call(c.hwnd, 4)
@@ -352,8 +268,9 @@ func (c *Controller) place(m monitor, x, y float64) {
 	x = math.Max(float64(m.Work.Left), math.Min(x, float64(m.Work.Right-w)))
 	y = math.Max(float64(m.Work.Top), math.Min(y, float64(m.Work.Bottom-h)))
 	pt := point{int32(math.Round(x)), int32(math.Round(y))}
-	screenToClient.Call(c.host, uintptr(unsafe.Pointer(&pt)))
-	setWindowPos.Call(c.hwnd, 0, uintptr(pt.X), uintptr(pt.Y), uintptr(w), uintptr(h), 0x4|0x10)
+	shell, _, _ := getShellWindow.Call()
+	above, _, _ := getWindow.Call(shell, 3)                                                      // GW_HWNDPREV
+	setWindowPos.Call(c.hwnd, above, uintptr(pt.X), uintptr(pt.Y), uintptr(w), uintptr(h), 0x10) // SWP_NOACTIVATE
 	c.monitor = m
 	getWindowRect.Call(c.hwnd, uintptr(unsafe.Pointer(&c.frame)))
 	c.position = model.Position{Monitor: m.ID, X: (x - float64(m.Work.Left)) / dpi, Y: (y - float64(m.Work.Top)) / dpi}
@@ -362,15 +279,9 @@ func (c *Controller) place(m monitor, x, y float64) {
 		windowDPI = 96
 	}
 	c.visualScale = float32(m.DPI) / float32(windowDPI)
-	// The hit-test region extends one pixel beyond the UI's rounded boundary,
-	// so its binary clipping cannot cut off antialiasing at any display scale.
-	radius := int32(math.Ceil(CornerRadius * dpi))
-	rgn, _, _ := createRoundRectRgn.Call(^uintptr(0), ^uintptr(0), uintptr(w+2), uintptr(h+2), uintptr(2*radius), uintptr(2*radius))
-	if rgn != 0 {
-		if ok, _, _ := setWindowRgn.Call(c.hwnd, rgn, 1); ok == 0 {
-			deleteObject.Call(rgn) // On success Windows owns the region.
-		}
-	}
+	// A window region would make Windows paint the window without its alpha,
+	// turning the UI's premultiplied rounded edge into a grey arc. The
+	// rounded panel and its antialiased edge are composited instead.
 	if c.OnRedraw != nil {
 		c.OnRedraw()
 	}
@@ -509,15 +420,7 @@ func windowProcedure(hwnd, message, wp, lp, _, _ uintptr) uintptr {
 				c.reportPosition()
 				return 0
 			}
-		case 0x02E0, 0x02E3: // WM_DPICHANGED / WM_DPICHANGED_AFTERPARENT.
-			// MyGo's top-level screen rect is wrong for an Explorer child.
-			if !entry.surface {
-				if !c.placing && !c.dragging && c.resizing == 0 {
-					_ = c.Restore(c.preferredPosition)
-				}
-				return 0
-			}
-		case 0x0082: // WM_NCDESTROY; Explorer may destroy the cross-process child.
+		case 0x0082: // WM_NCDESTROY.
 			delete(hooks, hwnd)
 		}
 	}
