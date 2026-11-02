@@ -162,6 +162,9 @@ func (c *Controller) Attach(hwnd uintptr, position model.Position, width, height
 // MaintainZOrder keeps the widget directly above the desktop window, so it
 // stays visible when Show Desktop raises that window, and under every app.
 func (c *Controller) MaintainZOrder() {
+	if c.hwnd == 0 || c.dragging || c.resizing != 0 {
+		return // Changing z-order during a capture would cancel the drag.
+	}
 	shell, _, _ := getShellWindow.Call()
 	if shell == 0 {
 		return
@@ -409,6 +412,7 @@ func windowProcedure(hwnd, message, wp, lp, _, _ uintptr) uintptr {
 				c.resizing = 0
 				c.preferredPosition = c.position
 				releaseCapture.Call()
+				c.MaintainZOrder()
 				if c.OnResize != nil {
 					c.OnResize(c.position, c.Size())
 				}
@@ -418,6 +422,7 @@ func windowProcedure(hwnd, message, wp, lp, _, _ uintptr) uintptr {
 				c.dragging = false
 				releaseCapture.Call()
 				c.reportPosition()
+				c.MaintainZOrder()
 				return 0
 			}
 		case 0x0082: // WM_NCDESTROY.
