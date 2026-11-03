@@ -19,6 +19,7 @@ const CornerRadius = 8 // Fluent surface corners, in device-independent pixels.
 var (
 	user32              = syscall.NewLazyDLL("user32.dll")
 	comctl32            = syscall.NewLazyDLL("comctl32.dll")
+	dwmapi              = syscall.NewLazyDLL("dwmapi.dll")
 	shcore              = syscall.NewLazyDLL("shcore.dll")
 	findWindowEx        = user32.NewProc("FindWindowExW")
 	isWindow            = user32.NewProc("IsWindow")
@@ -27,6 +28,8 @@ var (
 	getCursorPos        = user32.NewProc("GetCursorPos")
 	getShellWindow      = user32.NewProc("GetShellWindow")
 	getWindow           = user32.NewProc("GetWindow")
+	setWindowLongPtr    = user32.NewProc("SetWindowLongPtrW")
+	dwmSetAttribute     = dwmapi.NewProc("DwmSetWindowAttribute")
 	setCapture          = user32.NewProc("SetCapture")
 	releaseCapture      = user32.NewProc("ReleaseCapture")
 	loadCursor          = user32.NewProc("LoadCursorW")
@@ -154,9 +157,18 @@ func (c *Controller) Attach(hwnd uintptr, position model.Position, width, height
 	if err := c.Restore(position); err != nil {
 		return err
 	}
-	showWindow.Call(hwnd, 4) // SW_SHOWNOACTIVATE; never foreground the desktop.
+	// A flyout stays above its owner, and the hidden owner sits high in the
+	// z-order; dropping the owner lets the widget sit above the desktop.
+	setWindowLongPtr.Call(hwnd, ^uintptr(7), 0) // GWLP_HWNDPARENT
 	c.MaintainZOrder()
 	return nil
+}
+
+// Reveal ends the cloak MyGo puts on a native UI window until its first
+// frame, which a window under the desktop may never draw.
+func (c *Controller) Reveal() {
+	off := int32(0)
+	dwmSetAttribute.Call(c.hwnd, 13, uintptr(unsafe.Pointer(&off)), 4) // DWMWA_CLOAK
 }
 
 // MaintainZOrder keeps the widget directly above the desktop window, so it
@@ -272,8 +284,14 @@ func (c *Controller) place(m monitor, x, y float64) {
 	y = math.Max(float64(m.Work.Top), math.Min(y, float64(m.Work.Bottom-h)))
 	pt := point{int32(math.Round(x)), int32(math.Round(y))}
 	shell, _, _ := getShellWindow.Call()
-	above, _, _ := getWindow.Call(shell, 3)                                                      // GW_HWNDPREV
-	setWindowPos.Call(c.hwnd, above, uintptr(pt.X), uintptr(pt.Y), uintptr(w), uintptr(h), 0x10) // SWP_NOACTIVATE
+	above, _, _ := getWindow.Call(shell, 3) // GW_HWNDPREV
+	insert, flags := above, uintptr(0x10)   // SWP_NOACTIVATE
+	if above == c.hwnd {
+		// Already just above the desktop: inserting after itself would make
+		// the whole call, the move included, a no-op.
+		insert, flags = 0, flags|0x4 // SWP_NOZORDER
+	}
+	setWindowPos.Call(c.hwnd, insert, uintptr(pt.X), uintptr(pt.Y), uintptr(w), uintptr(h), flags)
 	c.monitor = m
 	getWindowRect.Call(c.hwnd, uintptr(unsafe.Pointer(&c.frame)))
 	c.position = model.Position{Monitor: m.ID, X: (x - float64(m.Work.Left)) / dpi, Y: (y - float64(m.Work.Top)) / dpi}

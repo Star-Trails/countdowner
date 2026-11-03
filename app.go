@@ -187,6 +187,13 @@ func (a *application) maintainDesktop() {
 		err = controller.Attach(w.NativeHandle(), a.config.Position, size.Width, size.Height)
 		if err != nil {
 			w.Destroy() // Never leave a failed desktop widget as a floating window.
+		} else {
+			// MyGo reveals a native UI window once its first frame is ready;
+			// showing it directly would leave it cloaked and never visible.
+			w.ShowInactive()
+			controller.Reveal()
+			controller.MaintainZOrder()
+			w.Invalidate()
 		}
 	} else {
 		err = a.controller.Ensure()
