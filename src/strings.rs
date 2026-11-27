@@ -51,6 +51,37 @@ impl Language {
         }
     }
 
+    pub(super) fn title_font(self) -> &'static str {
+        if cfg!(target_os = "windows") {
+            // Keep Latin in Segoe UI and use the regional face before
+            // DirectWrite's per-character system fallback.
+            match self {
+                Self::En => "Segoe UI",
+                Self::ZhHant => "Segoe UI, Microsoft JhengHei UI, Noto Sans CJK TC, Noto Sans TC",
+                Self::ZhHans => "Segoe UI, Microsoft YaHei UI, Noto Sans CJK SC, Noto Sans SC",
+                Self::Ja => "Segoe UI, Yu Gothic UI, Noto Sans CJK JP, Noto Sans JP",
+                Self::Ko => "Segoe UI, Malgun Gothic, Noto Sans CJK KR, Noto Sans KR",
+            }
+        } else {
+            "system-ui"
+        }
+    }
+
+    pub(super) fn title_input_font(self) -> &'static str {
+        if cfg!(target_os = "windows") {
+            // RichEdit uses the first available face for editable text.
+            match self {
+                Self::En => "Segoe UI",
+                Self::ZhHant => "Microsoft JhengHei UI, Noto Sans CJK TC, Noto Sans TC, Segoe UI",
+                Self::ZhHans => "Microsoft YaHei UI, Noto Sans CJK SC, Noto Sans SC, Segoe UI",
+                Self::Ja => "Yu Gothic UI, Noto Sans CJK JP, Noto Sans JP, Segoe UI",
+                Self::Ko => "Malgun Gothic, Noto Sans CJK KR, Noto Sans KR, Segoe UI",
+            }
+        } else {
+            "system-ui"
+        }
+    }
+
     pub(crate) fn tr(self, key: &str) -> &'static str {
         let index = LANGUAGES
             .iter()

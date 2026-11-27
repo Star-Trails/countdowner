@@ -254,10 +254,10 @@ fn row(
                 .gap(px(2.))
                 .child(
                     text(item.title)
-                        .font_family("system-ui")
+                        .font_family(language.title_font())
                         .text_size(px(14.))
                         .line_height(px(16.))
-                        .font_weight(FontWeight::SEMIBOLD)
+                        .font_weight(FontWeight::NORMAL)
                         .text_color(move || theme().foreground)
                         .number_of_lines(2u32),
                 )

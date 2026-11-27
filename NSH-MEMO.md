@@ -10,6 +10,6 @@
 | 登录启动 | 使用 NSH 的登录项，显示系统报告的状态。旧的启动注册项由旧版管理。NSH CLI 的开发运行模式不注册登录项。 |
 | Windows 发布 | 发布工作流为 MSVC 目标静态链接 C 运行库，沿用单个可执行文件的便携 ZIP。 |
 | 相同代码切换后端 | Windows、macOS 和 Linux 使用相同组件和持久化 schema。NSH 仍需要对应平台的运行库与构建工具。桌面小组件行为随 NSH 对目标平台的支持变化。 |
-| 界面字体 | 设置页、小组件、日历和语言按钮使用同一设计的 Noto Sans CJK 地区子集。子集包括界面文案用到的字形与拉丁字母、数字。用户输入框和自定义标题使用系统默认字体，切换界面语言时字形和字重不变。 |
+| 界面字体 | 设置页、小组件、日历和语言按钮使用同一设计的 Noto Sans CJK 地区子集。子集包括界面文案用到的字形与拉丁字母、数字。自填标题使用常规字重的系统字体。Windows 上，中日韩界面的标题在 Segoe UI 后优先回退至对应地区字库，编辑框则以地区字库为首选。 |
 
 上游接口和实现见 [桌面 API](https://nsh.dev/modules/nsh-desktop)、[Windows 窗口层级](https://github.com/longbridge/nsh/blob/v0.7.2/crates/nsh-platform-windows/src/shell.rs#L517-L525)和 [NSH Rust 入口](https://nsh.dev/docs/rust)。

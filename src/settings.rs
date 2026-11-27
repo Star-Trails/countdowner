@@ -399,7 +399,7 @@ fn editor(
         .child(heading(move || language.tr(if editing.get() { "editCountdown" } else { "newCountdown" })))
         .child(input().value(draft.title).placeholder(language.tr("title"))
             .label(language.tr("title")).test_id("draft-title")
-            .font_family("system-ui")
+            .font_family(language.title_input_font())
             .element_ref(title).disabled(state.read_only)
             .rounded(px(5.)).border_1().border_color(move || theme().border)
             .h(px(34.)).px(px(8.)).text_color(move || theme().foreground)
@@ -567,8 +567,8 @@ fn countdowns(
                                     .child(
                                         text(item.title.clone())
                                             .flex_1()
-                                            .font_family("system-ui")
-                                            .font_weight(FontWeight::SEMIBOLD)
+                                            .font_family(language.title_font())
+                                            .font_weight(FontWeight::NORMAL)
                                             .text_color(move || theme().foreground),
                                     )
                                     .child(caption(move || {
