@@ -1,17 +1,12 @@
 default:
     @just --list
 
-# All tests here run in the host environment, not on Windows.
+# These tests use NSH's headless engine and need no desktop libraries.
 check:
-    go tool mygo i18n check
-    go test ./... -count=1
-    go vet ./...
-    GOOS=windows GOARCH=amd64 go vet ./...
-    GOOS=windows GOARCH=arm64 go vet ./...
+    cargo test --locked --lib
 
 build:
-    go tool mygo build -platform windows/amd64,windows/arm64
+    cargo build --locked --release --features native
 
-# Optional Native UI layout previews; these do not test desktop embedding.
-preview:
-    COUNTDOWNER_PREVIEW_DIR=build/previews go test . -run 'Test(LanguageOrderAndNativeViews|VisualCountdownPreviews)' -count=1
+run:
+    cargo run --locked --features native

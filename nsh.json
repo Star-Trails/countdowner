@@ -1,0 +1,11 @@
+{
+  "name": "Countdowner",
+  "id": "local.countdowner",
+  "version": "0.1.15",
+  "icon": "resources/icon.png",
+  "rust": ".",
+  "root": "App",
+  "appearance": "system",
+  "singleInstance": true,
+  "application": { "quitMode": "explicit" }
+}

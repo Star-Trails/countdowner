@@ -1,6 +1,7 @@
 # Build outputs and local tooling
 /build/
-/.mygo/
+/target/
+/.nsh/
 /.pi/
 *.exe
 *.syso

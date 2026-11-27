@@ -1,8 +1,0 @@
-{
-  "name": "Countdowner",
-  "identifier": "local.countdowner",
-  "version": "0.1.15",
-  "out": "build",
-  "icon": "resources/icon.png",
-  "i18n": { "dir": "locales", "source": "en" }
-}

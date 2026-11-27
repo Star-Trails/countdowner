@@ -14,12 +14,13 @@ concurrency:
 
 jobs:
   release:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    runs-on: windows-latest
+    timeout-minutes: 30
     permissions:
       contents: write
     env:
       TAG: ${{ github.ref_name }}
+      RUST_MIN_STACK: '268435456'
     defaults:
       run:
         shell: bash
@@ -29,46 +30,41 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go.mod
-          cache: true
+      - name: Set up Rust
+        run: |
+          rustup toolchain install stable --profile minimal --no-self-update
+          rustup default stable
+          rustup target add x86_64-pc-windows-msvc aarch64-pc-windows-msvc
 
       - name: Check version
         run: |
-          test "$TAG" = "v$(jq -r .version mygo.json)"
+          test "$TAG" = "v$(jq -r .version nsh.json)"
+          test "${TAG#v}" = "$(cargo metadata --locked --no-deps --format-version 1 | jq -r '.packages[] | select(.name == "countdowner") | .version')"
           test -s ".github/release-notes/$TAG.md"
 
-      - name: Install headless test libraries
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            libfontconfig1 libpango-1.0-0 libpangocairo-1.0-0 libpangoft2-1.0-0 libcairo2
-
-      - name: Test and vet
-        run: |
-          go tool mygo i18n check
-          go test ./... -count=1
-          go vet ./...
-          GOOS=windows GOARCH=amd64 go vet ./...
-          GOOS=windows GOARCH=arm64 go vet ./...
+      - name: Test the shared app
+        run: cargo test --locked --lib
 
       - name: Build Windows binaries
-        run: go tool mygo build -platform windows/amd64,windows/arm64
+        env:
+          RUSTFLAGS: -C target-feature=+crt-static
+        run: |
+          cargo build --locked --release --features native --target x86_64-pc-windows-msvc
+          cargo build --locked --release --features native --target aarch64-pc-windows-msvc
 
       - name: Package portable downloads
         run: |
-          mkdir -p build/release
-          for target in amd64 arm64; do
-            architecture="$target"
-            if [[ "$target" == "amd64" ]]; then
-              architecture=x64
+          cargo install cargo-bundle-licenses --locked --version 5.0.0
+          mkdir -p build/release build/portable/licenses
+          cargo bundle-licenses --features native --format yaml --output build/portable/licenses/THIRDPARTY.yml
+          cp resources/fonts/OFL.txt build/portable/licenses/Countdowner-UI-OFL.txt
+          for platform in x64 arm64; do
+            target=x86_64-pc-windows-msvc
+            if [[ "$platform" == arm64 ]]; then
+              target=aarch64-pc-windows-msvc
             fi
-            (
-              cd "build/windows-$target"
-              zip -r "../release/Countdowner-windows-$architecture.zip" Countdowner.exe licenses
-            )
+            cp "target/$target/release/countdowner.exe" build/portable/Countdowner.exe
+            (cd build/portable && 7z a -tzip "../release/Countdowner-windows-$platform.zip" Countdowner.exe licenses)
           done
           cd build/release
           sha256sum ./*.zip > SHA256SUMS.txt
